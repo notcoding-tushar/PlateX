@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Outputs & artifacts
+*.png
+*.csv
+!backend/tests/fixtures/*.csv
+
+# Frontend (Phase 3+)
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
