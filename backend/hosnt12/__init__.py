@@ -12,16 +12,21 @@ from hosnt12.schemas import (
     VehicleLoad,
 )
 
+from .solver import solve_hosnt12, solve_hosnt12_legacy, solve_sweep
+
 __all__ = [
-    "DOF",
     "BOUNDARY_CONDITIONS",
+    "DOF",
     "PRESET_LAMINATE_PROPERTIES",
-    "LayerProperty",
-    "ContactPatch",
-    "VehicleLoad",
-    "FoundationConfig",
-    "QueryPoint",
     "AnalysisConfig",
-    "StiffnessDiagnostics",
     "AnalysisResult",
+    "ContactPatch",
+    "FoundationConfig",
+    "LayerProperty",
+    "QueryPoint",
+    "StiffnessDiagnostics",
+    "VehicleLoad",
+    "solve_hosnt12",
+    "solve_hosnt12_legacy",
+    "solve_sweep",
 ]

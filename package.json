@@ -1,0 +1,7 @@
+{
+  "name": "platex",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/start.mjs"
+  }
+}

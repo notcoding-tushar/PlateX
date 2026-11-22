@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -35,7 +35,7 @@ class LayerProperty(BaseModel):
     beta3: float = 0.0
 
     @model_validator(mode="after")
-    def _validate_layer(self) -> "LayerProperty":
+    def _validate_layer(self) -> LayerProperty:
         vals = [
             self.h_bottom, self.h_top, self.E1, self.E2, self.E3,
             self.nu12, self.nu23, self.nu13, self.G12, self.G13, self.G23,
@@ -58,17 +58,19 @@ class ContactPatch(BaseModel):
     and circular footprints (IRC:37 dual wheels, IRC:58 axle groups).
     """
 
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+
     x_m: float
     y_m: float
     force_N: float = Field(gt=0.0)
     shape: Literal["rectangle", "circle"] = "rectangle"
-    length_m: Optional[float] = Field(default=None, gt=0.0)
-    width_m: Optional[float] = Field(default=None, gt=0.0)
-    radius_m: Optional[float] = Field(default=None, gt=0.0)
+    length_m: float | None = Field(default=None, gt=0.0)
+    width_m: float | None = Field(default=None, gt=0.0)
+    radius_m: float | None = Field(default=None, gt=0.0)
     label: str = ""
 
     @model_validator(mode="after")
-    def _validate_geometry(self) -> "ContactPatch":
+    def _validate_geometry(self) -> ContactPatch:
         if not (math.isfinite(self.x_m) and math.isfinite(self.y_m) and math.isfinite(self.force_N)):
             raise ValueError("Patch coordinates and force must be finite.")
         if self.shape == "rectangle":
@@ -97,22 +99,28 @@ class ContactPatch(BaseModel):
 class VehicleLoad(BaseModel):
     """Discrete 1-based nodal vertical loads and/or contact patch loads."""
 
-    nodal_loads: List[Tuple[int, float]] = Field(default_factory=list)
-    patches: List[ContactPatch] = Field(default_factory=list)
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+
+    nodal_loads: list[tuple[int, float]] = Field(default_factory=list)
+    patches: list[ContactPatch] = Field(default_factory=list)
 
 
 class FoundationConfig(BaseModel):
     """Elastic foundation parameters: either dimensional (Kw, Kp, Kp_y) or dimensionless (K0, J0)."""
 
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+
     Kw: float = Field(default=0.0, ge=0.0)
     Kp: float = Field(default=0.0, ge=0.0)
-    Kp_y: Optional[float] = Field(default=None, ge=0.0)
-    K0: Optional[float] = Field(default=None, ge=0.0)
-    J0: Optional[float] = Field(default=None, ge=0.0)
+    Kp_y: float | None = Field(default=None, ge=0.0)
+    K0: float | None = Field(default=None, ge=0.0)
+    J0: float | None = Field(default=None, ge=0.0)
 
 
 class QueryPoint(BaseModel):
     """Arbitrary stress/deflection evaluation point in plate coordinates (m)."""
+
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
 
     label: str = "custom"
     x_m: float
@@ -124,6 +132,8 @@ class QueryPoint(BaseModel):
 class AnalysisConfig(BaseModel):
     """Complete, self-contained input configuration for a single HOSNT12 analysis."""
 
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+
     a: float = Field(default=1.0, gt=0.0)
     b: float = Field(default=3.0, gt=0.0)
     h: float = Field(default=0.1, gt=0.0)
@@ -131,27 +141,27 @@ class AnalysisConfig(BaseModel):
     n: int = Field(default=10, ge=1)
 
     material_mode: Literal["isotropic", "laminate"] = "isotropic"
-    E: Optional[float] = None
-    nu: Optional[float] = None
+    E: float | None = None
+    nu: float | None = None
     alpha: float = 0.0
     beta: float = 0.0
-    layers: Optional[List[LayerProperty]] = None
+    layers: list[LayerProperty] | None = None
 
     choicebc: int = Field(default=1, ge=1, le=6)
     load_case: Literal["sinusoidal", "uniform"] = "sinusoidal"
     q0: float = Field(default=100.0, ge=0.0)
     nonlocal_parameter: float = Field(default=0.0, ge=0.0)
 
-    t_coeffs: Optional[Tuple[float, float, float]] = None
-    c_coeffs: Optional[Tuple[float, float, float]] = None
+    t_coeffs: tuple[float, float, float] | None = None
+    c_coeffs: tuple[float, float, float] | None = None
     thermal_distribution: Literal["sinusoidal", "uniform"] = "sinusoidal"
 
     foundation: FoundationConfig = Field(default_factory=FoundationConfig)
-    vehicle_load: Optional[VehicleLoad] = None
-    query_points: List[QueryPoint] = Field(default_factory=list)
+    vehicle_load: VehicleLoad | None = None
+    query_points: list[QueryPoint] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _validate_config(self) -> "AnalysisConfig":
+    def _validate_config(self) -> AnalysisConfig:
         if self.material_mode == "isotropic":
             if self.E is None or self.nu is None:
                 raise ValueError("Isotropic material requires E and nu; no default material is assumed.")
@@ -181,8 +191,8 @@ class PointResult(BaseModel):
 
 
 class StiffnessDiagnostics(BaseModel):
-    global_shape: Tuple[int, int]
-    reduced_shape: Tuple[int, int]
+    global_shape: tuple[int, int]
+    reduced_shape: tuple[int, int]
     nnz: int
     density_pct: float
     diag_min: float
@@ -191,8 +201,14 @@ class StiffnessDiagnostics(BaseModel):
     max_asymmetry: float
     Db_norm: float
     Ds_norm: float
-    Db_top_left_4x4: List[List[float]]
-    Ds_top_left_2x2: List[List[float]]
+    Db_top_left_4x4: list[list[float]]
+    Ds_top_left_2x2: list[list[float]]
+
+
+class DeflectionField(BaseModel):
+    coordinates: list[tuple[float, float]]
+    elements: list[list[int]]
+    w_m: list[float]
 
 
 class AnalysisResult(BaseModel):
@@ -200,6 +216,7 @@ class AnalysisResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    field: DeflectionField | None = None
     mesh: str
     m: int
     n: int
@@ -217,17 +234,71 @@ class AnalysisResult(BaseModel):
     tau_xy_pa: float
     tau_xz_pa: float
 
-    w_bar: Optional[float] = None
-    sigma_x_bar: Optional[float] = None
-    tau_xy_bar: Optional[float] = None
-    tau_xz_bar: Optional[float] = None
+    w_bar: float | None = None
+    sigma_x_bar: float | None = None
+    tau_xy_bar: float | None = None
+    tau_xz_bar: float | None = None
 
     flexural_rigidity_D_Nm: float
     flexural_rigidity_Dy_Nm: float
-    stress_sample_locations: Dict[str, Dict[str, float]]
-    point_results: List[PointResult] = Field(default_factory=list)
+    stress_sample_locations: dict[str, dict[str, float]]
+    point_results: list[PointResult] = Field(default_factory=list)
 
     stiffness_info: StiffnessDiagnostics
     time_s: float
-    solver_warnings: List[str] = Field(default_factory=list)
-    modeling_notes: List[str] = Field(default_factory=list)
+    solver_warnings: list[str] = Field(default_factory=list)
+    modeling_notes: list[str] = Field(default_factory=list)
+
+
+class SweepRequest(BaseModel):
+    base_config: AnalysisConfig
+    load_cases: list[AnalysisConfig | VehicleLoad] = Field(min_length=1)
+
+
+class BenchmarkResult(BaseModel):
+    computed: dict[str, float]
+    reference: dict[str, float]
+
+
+class IRCPlacement(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    case: str
+    a: float = Field(gt=0)
+    b: float = Field(gt=0)
+    x_m: float
+    y_m: float
+    group_load_kN: float = Field(default=80, gt=0)
+    wheel_offsets_m: list[float] = Field(default_factory=list)
+    spacing_m: float = Field(default=1.3, gt=0)
+    tyre_pattern: Literal["L", "M", "N"] = "L"
+    flexural_strength_MPa: float | None = Field(default=None, gt=0)
+    water_cm: float | None = Field(default=None, gt=0)
+
+
+class Citation(BaseModel):
+    code: str
+    location: str
+    printed_pages: list[int]
+    pdf_pages: list[int]
+    filename: str
+
+
+class IRCOption(BaseModel):
+    case: str
+    label: str
+    mode: Literal["flexible", "rigid", "bridge"]
+
+
+class IRCPreview(BaseModel):
+    vehicle_load: VehicleLoad
+    inside_plate: bool
+    sources: list[Citation]
+    notes: list[str]
+
+
+class IRCCheck(BaseModel):
+    name: str
+    status: Literal["pass", "fail", "needs_input"]
+    message: str
+    source: Citation
+
