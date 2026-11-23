@@ -28,3 +28,5 @@ Thumbs.db
 
 # External software & reverse-engineering workspace (local only)
 /external_tools/
+# Legacy REA npm cache: local installation files must never be committed.
+/.rea-npm-cache/
