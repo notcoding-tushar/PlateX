@@ -25,3 +25,6 @@ frontend/.env.local
 .idea/
 .DS_Store
 Thumbs.db
+
+# External software & reverse-engineering workspace (local only)
+/external_tools/

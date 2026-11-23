@@ -271,6 +271,9 @@ class IRCPlacement(BaseModel):
     wheel_offsets_m: list[float] = Field(default_factory=list)
     spacing_m: float = Field(default=1.3, gt=0)
     tyre_pattern: Literal["L", "M", "N"] = "L"
+    aa_wheel_offsets_y_mm: list[float] | None = None
+    prime_mover_contacts: list[ContactPatch] | None = None
+    sv_eccentricity_mm: float = 0
     flexural_strength_MPa: float | None = Field(default=None, gt=0)
     water_cm: float | None = Field(default=None, gt=0)
 
@@ -301,4 +304,62 @@ class IRCCheck(BaseModel):
     status: Literal["pass", "fail", "needs_input"]
     message: str
     source: Citation
+
+
+class IRCRigidRequest(BaseModel):
+    base_config: AnalysisConfig
+    cbr_percent: float
+    cbr_code: Literal["IRC:58-2015", "IRC:15-2017"] = "IRC:58-2015"
+    support: Literal["raw", "effective"] = "raw"
+    subbase: Literal["DLC", "untreated", "cement_treated"] = "DLC"
+    subbase_thickness_mm: float | None = None
+    explicit_dlc: bool = False
+    interpolate: bool = False
+    raw: bool = False
+    temperature_zone: str | None = None
+    temperature_period: Literal["day", "night"] = "day"
+
+
+class IRCFoundationLookup(BaseModel):
+    cbr_percent: float
+    cbr_code: Literal["IRC:58-2015", "IRC:15-2017"] = "IRC:58-2015"
+    subbase: Literal["DLC", "untreated", "cement_treated"] = "DLC"
+    subbase_thickness_mm: float
+    interpolate: bool = False
+    raw: bool = False
+
+
+class IRCFlexibleRequest(BaseModel):
+    base_config: AnalysisConfig
+    category: str
+    cbr: float
+    traffic_msa: float
+    bituminous_E_MPa: float
+    subgrade_thickness_m: float = Field(gt=0)
+    x_m: float
+    y_m: float
+    ctb_fatigue: bool = False
+
+
+class IRCPrepared(BaseModel):
+    config: AnalysisConfig
+    sources: list[Citation]
+    modeling_notes: list[str]
+    details: dict = Field(default_factory=dict)
+
+
+class IRCComplianceRequest(BaseModel):
+    kind: Literal["pqc", "dlc", "wbm", "dowel", "grading", "tie_bars"]
+    arguments: dict
+
+
+class IRCComplianceResult(BaseModel):
+    checks: list[IRCCheck] = Field(default_factory=list)
+    options: list[dict] = Field(default_factory=list)
+    sources: list[Citation] = Field(default_factory=list)
+
+
+class IRCSweepRequest(BaseModel):
+    base_config: AnalysisConfig
+    placements: list[IRCPlacement] = Field(min_length=1)
 

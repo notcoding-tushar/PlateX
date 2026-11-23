@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "rea-agents": "^6.10.1"
+  },
+  "_npx": {
+    "packages": [
+      "rea-agents@latest"
+    ]
+  }
+}

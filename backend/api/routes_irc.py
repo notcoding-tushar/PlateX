@@ -1,7 +1,21 @@
 from fastapi import APIRouter
 
 from hosnt12.irc import adapters
-from hosnt12.schemas import IRCCheck, IRCOption, IRCPlacement, IRCPreview
+from hosnt12.schemas import (
+    AnalysisResult,
+    IRCCheck,
+    IRCComplianceRequest,
+    IRCComplianceResult,
+    IRCFlexibleRequest,
+    IRCFoundationLookup,
+    IRCOption,
+    IRCPlacement,
+    IRCPrepared,
+    IRCPreview,
+    IRCRigidRequest,
+    IRCSweepRequest,
+)
+from hosnt12.solver import solve_hosnt12
 
 router = APIRouter(prefix="/api/irc")
 
@@ -19,3 +33,40 @@ def preview(body: IRCPlacement) -> IRCPreview:
 @router.post("/check")
 def check(body: IRCPlacement) -> list[IRCCheck]:
     return adapters.check(body)
+
+
+@router.post("/rigid")
+def rigid(body: IRCRigidRequest) -> IRCPrepared:
+    return adapters.prepare_rigid(body)
+
+
+@router.post("/foundation-lookup")
+def foundation_lookup(body: IRCFoundationLookup) -> dict:
+    return adapters.foundation_lookup(body)
+
+
+@router.post("/flexible")
+def flexible(body: IRCFlexibleRequest) -> IRCPrepared:
+    return adapters.prepare_flexible(body)
+
+
+@router.post("/compliance")
+def compliance(body: IRCComplianceRequest) -> IRCComplianceResult:
+    return adapters.compliance(body)
+
+
+@router.get("/bridge-guidance")
+def bridge_guidance(width_m: float, vehicle: str = "A") -> dict:
+    return adapters.bridge_guidance(width_m, vehicle)
+
+
+@router.post("/solve")
+def solve(body: IRCPrepared) -> AnalysisResult:
+    result = solve_hosnt12(body.config, include_field=True)
+    result.modeling_notes.extend(body.modeling_notes)
+    return result
+
+
+@router.post("/sweep")
+def sweep(body: IRCSweepRequest) -> list[AnalysisResult]:
+    return adapters.solve_placements(body.base_config, body.placements)

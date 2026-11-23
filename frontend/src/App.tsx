@@ -301,6 +301,8 @@ export default function App() {
         {visited && (
           <div hidden={tab !== 1}>
             <Irc
+              config={c}
+              applyConfig={(config, info) => { set(config); setNotes(info); setTab(0); }}
               drawer={drawer}
               close={() => setDrawer(false)}
               open={() => setDrawer(true)}

@@ -30,6 +30,8 @@ export interface Config {
   c_coeffs: number[];
   foundation: Partial<Record<"K0" | "J0" | "Kw" | "Kp", number>>;
   vehicle_load: Vehicle;
+  layers?: unknown[] | null;
+  query_points?: unknown[];
 }
 export const initial: Config = {
   a: 1,
@@ -101,6 +103,7 @@ export interface Placement {
   wheel_offsets_m: number[];
   spacing_m: number;
   tyre_pattern: "L" | "M" | "N";
+  aa_wheel_offsets_y_mm?: number[] | null;
   flexural_strength_MPa: number | null;
   water_cm: number | null;
 }
@@ -156,6 +159,9 @@ export const api = {
   options: () => request<Option[]>("irc/options"),
   preview: (v: Placement) => request<Preview>("irc/preview-loads", v),
   check: (v: Placement) => request<Check[]>("irc/check", v),
+  prepare: (mode: "rigid" | "flexible", body: unknown) =>
+    request<{ config: Config; modeling_notes: string[]; sources: Source[]; details: unknown }>("irc/" + mode, body),
+  compliance: (kind: string, args: unknown) => request<{ checks: Check[]; options: Record<string, number>[]; sources: Source[] }>("irc/compliance", { kind, arguments: args }),
   benchmark: (thermal: boolean) =>
     request<Benchmark>("validation?hygrothermal=" + thermal),
 };

@@ -6,6 +6,8 @@ import {
   CircularProgress,
   Drawer,
   IconButton,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import Close from "@mui/icons-material/Close";
 import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
@@ -18,6 +20,7 @@ import {
   type Preview,
   type Source,
   type Vehicle,
+  type Config,
 } from "../api/client";
 import { palette } from "../theme";
 import { Num, Select, Section } from "../components/Controls";
@@ -53,11 +56,15 @@ export function Irc({
   close,
   open,
   apply,
+  config,
+  applyConfig,
 }: {
   drawer: boolean;
   close: () => void;
   open: () => void;
   apply: (p: Placement, v: Vehicle, notes: string[]) => void;
+  config: Config;
+  applyConfig: (config: Config, notes: string[]) => void;
 }) {
   const [options, setOptions] = useState<Option[]>([]),
     [p, setP] = useState(initial),
@@ -66,6 +73,15 @@ export function Irc({
     [err, setErr] = useState(""),
     [retry, setRetry] = useState(0);
   const [offsets, setOffsets] = useState("-0.75, 0.75");
+  const [checkKind, setCheckKind] = useState("pqc"),
+    [checkArgs, setCheckArgs] = useState('{"flexural_strength_28d_MPa": 4.5, "water_cementitious_ratio": 0.4}'),
+    [extraChecks, setExtraChecks] = useState<Check[]>([]),
+    [extraOptions, setExtraOptions] = useState<Record<string, number>[]>([]),
+    [extraSources, setExtraSources] = useState<Source[]>([]);
+  const [cbr, setCbr] = useState(5), [traffic, setTraffic] = useState(10),
+    [category, setCategory] = useState("a"), [bitumen, setBitumen] = useState(2000),
+    [subgrade, setSubgrade] = useState(1), [support, setSupport] = useState("raw"),
+    [thickness, setThickness] = useState(150), [zone, setZone] = useState("");
   const mode = options.find((o) => o.case === p.case)?.mode ?? "flexible";
   useEffect(() => {
     let alive = true;
@@ -149,6 +165,16 @@ export function Irc({
           IRC Checks &amp; Provenance
         </Button>
       </div>
+      <Tabs value={mode} onChange={(_, v: string) => {
+        const c = options.find((o) => o.mode === v);
+        if (c) update({ case: c.case, ...(v === "bridge"
+          ? { a: 24, b: 7, x_m: 1, y_m: 3.5 }
+          : { a: 4.5, b: 3.5, x_m: 0.6, y_m: 1.75 }) });
+      }} aria-label="IRC applications">
+        <Tab value="rigid" label="IRC Rigid" />
+        <Tab value="flexible" label="IRC Flexible" />
+        <Tab value="bridge" label="IRC Bridge" />
+      </Tabs>
       {err && (
         <Alert
           severity="error"
@@ -165,24 +191,6 @@ export function Irc({
           <Section title="Vehicle configuration" open>
             {options.length > 0 && (
               <>
-                <Select
-                  label="Application"
-                  value={mode}
-                  items={[
-                    ["flexible", "Flexible pavement"],
-                    ["rigid", "Rigid pavement"],
-                    ["bridge", "Bridge carriageway"],
-                  ]}
-                  set={(v) => {
-                    const c = options.find((o) => o.mode === v)!;
-                    update({
-                      case: c.case,
-                      ...(v === "bridge"
-                        ? { a: 24, b: 7, x_m: 1, y_m: 3.5 }
-                        : { a: 4.5, b: 3.5, x_m: 0.6, y_m: 1.75 }),
-                    });
-                  }}
-                />
                 <Select
                   label="Load case"
                   value={p.case}
@@ -223,6 +231,12 @@ export function Irc({
                 items={["L", "M", "N"].map((v) => [v, v])}
               />
             )}
+            {p.case === "AA_WHEELED" && (
+              <label>Four verified AA wheel offsets (mm)
+                <input placeholder="e.g. -900, -300, 300, 900"
+                  onChange={(e) => update({ aa_wheel_offsets_y_mm: e.target.value.split(",").map(v => v.trim() ? Number(v) : NaN) })} />
+              </label>
+            )}
             <div className="two">
               {number("x_m", "Origin x (m)")}
               {number("y_m", "Origin y (m)")}
@@ -243,6 +257,32 @@ export function Irc({
               {number("water_cm", "Free water / cementitious ratio")}
             </Section>
           )}
+          {mode !== "bridge" && <Section title="Pavement analysis model">
+            <Num label="Design CBR (%)" value={cbr} set={setCbr} />
+            {mode === "rigid" ? <>
+              <Select label="Foundation support" value={support} set={setSupport}
+                items={[["raw", "Raw subgrade k"], ["effective", "Effective k with DLC"]]} />
+              {support === "effective" && <Num label="DLC thickness (mm)" value={thickness} set={setThickness} />}
+              <Select label="Temperature zone" value={zone} set={setZone}
+                items={[["", "No temperature load"], ...["I", "II", "III", "IV", "V", "VI", "VII"].map((v): [string, string] => [v, v])]} />
+            </> : <>
+              <Select label="Catalogue category" value={category} set={setCategory}
+                items={["a", "b", "c", "d", "e", "f"].map(v => [v, v.toUpperCase()])} />
+              <Num label="Traffic (msa, exact catalogue value)" value={traffic} set={setTraffic} />
+              <Num label="Trial bituminous modulus (MPa)" value={bitumen} set={setBitumen} />
+              <Num label="Finite subgrade thickness (m)" value={subgrade} set={setSubgrade} />
+            </>}
+            <Button variant="outlined" onClick={async () => {
+              try {
+                const base_config = { ...config, a: p.a, b: p.b, vehicle_load: preview?.vehicle_load ?? { patches: [] }, q0: 0 };
+                const body = mode === "rigid"
+                  ? { base_config, cbr_percent: cbr, support, subbase_thickness_mm: thickness, temperature_zone: zone || null }
+                  : { base_config, category, cbr, traffic_msa: traffic, bituminous_E_MPa: bitumen, subgrade_thickness_m: subgrade, x_m: p.x_m, y_m: p.y_m, ctb_fatigue: p.case === "dual_ctb" };
+                const prepared = await api.prepare(mode, body);
+                applyConfig(prepared.config, prepared.modeling_notes);
+              } catch (e) { setErr(e instanceof Error ? e.message : "Could not prepare model"); }
+            }}>Prepare model in solver</Button>
+          </Section>}
         </aside>
         <div className="card">
           <div className="cardHeading">
@@ -372,6 +412,22 @@ export function Irc({
             </IconButton>
           </div>
           {err && <Alert severity="error">{err}</Alert>}
+          <Section title="Additional compliance checks">
+            <Select label="Check" value={checkKind} set={setCheckKind}
+              items={[["pqc", "PQC"], ["dlc", "DLC"], ["wbm", "WBM"], ["dowel", "Dowel"], ["tie_bars", "Tie bars"], ["grading", "Grading"]]} />
+            <label>Check arguments (JSON, library units)
+              <textarea rows={5} value={checkArgs} onChange={e => setCheckArgs(e.target.value)} />
+            </label>
+            <Button onClick={async () => {
+              try {
+                const result = await api.compliance(checkKind, JSON.parse(checkArgs));
+                setExtraChecks(result.checks); setExtraOptions(result.options); setExtraSources(result.sources); setErr("");
+              } catch (e) { setErr(e instanceof Error ? e.message : "Check failed"); }
+            }}>Run check</Button>
+            {extraChecks.map((c, i) => <article key={i}><h3>{c.name} · {c.status}</h3><p>{c.message}</p><Cite s={c.source} /></article>)}
+            {extraOptions.length > 0 && <pre>{JSON.stringify(extraOptions, null, 2)}</pre>}
+            {extraSources.map((s, i) => <Cite key={i} s={s} />)}
+          </Section>
           {!preview && !err && <CircularProgress size={24} />}
           {checks.map((c, i) => (
             <article key={i}>
