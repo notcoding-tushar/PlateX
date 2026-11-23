@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Alert, Button } from "@mui/material";
-import { api, fmt, type Benchmark, type Result } from "../api/client";
+import {
+  api,
+  fmt,
+  metrics,
+  type Metric,
+  type Benchmark,
+  type Result,
+} from "../api/client";
 import { Select } from "../components/Controls";
 
 export function Validation({ result }: { result: Result | null }) {
@@ -23,15 +30,11 @@ export function Validation({ result }: { result: Result | null }) {
     <>
       <div className="pageHead">
         <div>
-          <div className="crumb">Workbench / Diagnostics</div>
-          <h1>Matrix &amp; Validation</h1>
-          <p>
-            Inspect the latest stiffness matrix and reproduce the reference
-            case.
-          </p>
+          <h1>Matrix &amp; validation</h1>
+          <p>Stiffness diagnostics and published plate benchmarks</p>
         </div>
       </div>
-      <div className="equalgrid">
+      <div className="workgrid validationGrid">
         <section className="card inner">
           <h2>Stiffness matrix</h2>
           {result ? (
@@ -100,16 +103,18 @@ export function Validation({ result }: { result: Result | null }) {
             <table>
               <thead>
                 <tr>
-                  <th>Quantity</th>
-                  <th>Computed</th>
-                  <th>Paper</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col" className="computed">
+                    Computed
+                  </th>
+                  <th scope="col">Published</th>
                 </tr>
               </thead>
               <tbody>
                 {Object.entries(bench.computed).map(([k, v]) => (
                   <tr key={k}>
-                    <th>{k}</th>
-                    <td>{fmt(v)}</td>
+                    <th scope="row">{metrics[k as Metric]?.[0] ?? k}</th>
+                    <td className="computed">{fmt(v)}</td>
                     <td>{fmt(bench.reference[k])}</td>
                   </tr>
                 ))}

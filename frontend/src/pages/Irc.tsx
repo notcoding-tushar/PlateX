@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import Close from "@mui/icons-material/Close";
 import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
-import LayersOutlined from "@mui/icons-material/LayersOutlined";
 import {
   api,
   fmt,
@@ -20,6 +19,7 @@ import {
   type Source,
   type Vehicle,
 } from "../api/client";
+import { palette } from "../theme";
 import { Num, Select, Section } from "../components/Controls";
 
 const initial: Placement = {
@@ -37,9 +37,14 @@ const initial: Placement = {
 };
 function Cite({ s }: { s: Source }) {
   return (
-    <small>
-      {s.code} · {s.location} · printed pp. {s.printed_pages.join(", ")} · PDF
-      pp. {s.pdf_pages.join(", ")}
+    <small className="citation">
+      <span>
+        <strong>{s.code}</strong> · {s.location}
+      </span>
+      <span>
+        Printed pp. {s.printed_pages.join(", ")} · PDF pp.{" "}
+        {s.pdf_pages.join(", ")}
+      </span>
     </small>
   );
 }
@@ -124,18 +129,17 @@ export function Irc({
       set={(n) => update({ [k]: Number.isNaN(n) ? null : n })}
     />
   );
-  const scale = Math.min(530 / p.a, 225 / p.b),
+  const scale = Math.min(500 / p.a, 172 / p.b),
     w = p.a * scale,
     h = p.b * scale,
     x0 = (640 - w) / 2,
-    y0 = (300 - h) / 2;
+    y0 = (240 - h) / 2 - 8;
   return (
     <>
       <div className="pageHead">
         <div>
-          <div className="crumb">Workbench / IRC loads</div>
           <h1>IRC Pavement &amp; Bridge</h1>
-          <p>Place pavement tyres and bridge trains on the analysis plate.</p>
+          <p>Place pavement tyres and bridge loads on the analysis plate</p>
         </div>
         <Button
           variant="outlined"
@@ -156,7 +160,6 @@ export function Irc({
       <div className="workgrid">
         <aside className="card setup">
           <div className="cardHeading">
-            <LayersOutlined />
             <h2>Load placement</h2>
           </div>
           <Section title="Vehicle configuration" open>
@@ -251,7 +254,7 @@ export function Irc({
               <svg
                 role="img"
                 aria-label="Plate and contact footprints in plan"
-                viewBox="0 0 640 300"
+                viewBox="0 0 640 240"
                 className="plan"
               >
                 <defs>
@@ -264,8 +267,9 @@ export function Irc({
                     <path
                       d="M16 0H0V16"
                       fill="none"
-                      stroke="#729390"
+                      stroke={palette.taupe}
                       strokeWidth=".65"
+                      strokeOpacity=".55"
                     />
                   </pattern>
                 </defs>
@@ -275,8 +279,8 @@ export function Irc({
                   width={w}
                   height={h}
                   fill="url(#planGrid)"
-                  stroke="#b7d8ce"
-                  strokeWidth="2"
+                  stroke={palette.plum}
+                  strokeWidth="1.2"
                 />
                 {preview.vehicle_load.patches.map((v, i) => {
                   const x = x0 + v.x_m * scale,
@@ -287,7 +291,9 @@ export function Irc({
                       cx={x}
                       cy={y}
                       r={v.radius_m! * scale}
-                      fill="#f3cd6b"
+                      fill={palette.peach}
+                      stroke={palette.plum}
+                      strokeWidth="1"
                     />
                   ) : (
                     <rect
@@ -296,28 +302,48 @@ export function Irc({
                       y={y - (v.width_m! * scale) / 2}
                       width={v.length_m! * scale}
                       height={v.width_m! * scale}
-                      fill="#f3cd6b"
+                      fill={palette.peach}
+                      stroke={palette.plum}
+                      strokeWidth="1"
                     />
                   );
                 })}
-                <text x={x0} y={y0 + h + 20} fill="#ccdddb" fontSize="11">
-                  0, 0
-                </text>
+                <g fill="none" stroke={palette.plum} strokeWidth="1">
+                  <path d={`M${x0} ${y0 + h + 8}v16m0 -8h${w}m0 -8v16`} />
+                  <path d={`M${x0 - 8} ${y0}h-16m8 0v${h}m-8 0h16`} />
+                </g>
+                <g
+                  fill={palette.ink}
+                  fontFamily="monospace"
+                  fontSize="13"
+                  textAnchor="middle"
+                >
+                  <text x={x0 + w / 2} y={y0 + h + 36}>
+                    x · {fmt(p.a)} m
+                  </text>
+                  <text
+                    transform={`translate(${x0 - 26} ${y0 + h / 2}) rotate(-90)`}
+                  >
+                    y · {fmt(p.b)} m
+                  </text>
+                </g>
               </svg>
-              <div className="inner">
-                <h3>{preview.vehicle_load.patches.length} contact patches</h3>
-                <p>
-                  {fmt(
-                    preview.vehicle_load.patches.reduce(
-                      (s, v) => s + v.force_N,
-                      0,
-                    ) / 1000,
-                  )}{" "}
-                  kN nominal load ·{" "}
-                  {preview.inside_plate
-                    ? "Fully on plate"
-                    : "Clipped at plate edge"}
-                </p>
+              <div className="inner planSummary">
+                <div>
+                  <h3>{preview.vehicle_load.patches.length} contact patches</h3>
+                  <p>
+                    {fmt(
+                      preview.vehicle_load.patches.reduce(
+                        (s, v) => s + v.force_N,
+                        0,
+                      ) / 1000,
+                    )}{" "}
+                    kN nominal load ·{" "}
+                    {preview.inside_plate
+                      ? "Fully on plate"
+                      : "Clipped at plate edge"}
+                  </p>
+                </div>
                 <Button
                   variant="contained"
                   onClick={() => apply(p, preview.vehicle_load, preview.notes)}
@@ -325,8 +351,8 @@ export function Irc({
                   Use in plate solver
                 </Button>
                 <p className="meta">
-                  Transfers plate dimensions and footprints. Distributed
-                  pressure starts at zero.
+                  Transfers plate dimensions and footprints with distributed
+                  pressure set to zero
                 </p>
               </div>
             </>
@@ -340,7 +366,7 @@ export function Irc({
       <Drawer anchor="right" open={drawer} onClose={close}>
         <div className="drawer">
           <div className="cardHeading">
-            <h2>IRC Checks &amp; Provenance</h2>
+            <h2>IRC checks &amp; provenance</h2>
             <IconButton aria-label="Close panel" onClick={close}>
               <Close />
             </IconButton>
@@ -349,18 +375,25 @@ export function Irc({
           {!preview && !err && <CircularProgress size={24} />}
           {checks.map((c, i) => (
             <article key={i}>
-              <Chip
-                size="small"
-                label={c.status}
-                color={
-                  c.status === "pass"
-                    ? "success"
-                    : c.status === "fail"
-                      ? "error"
-                      : "warning"
-                }
-              />
-              <h3>{c.name}</h3>
+              <div className="checkHeading">
+                <h3>{c.name}</h3>
+                <Chip
+                  size="small"
+                  label={
+                    { pass: "Pass", fail: "Fail", needs_input: "Needs input" }[
+                      c.status
+                    ]
+                  }
+                  variant="outlined"
+                  color={
+                    c.status === "pass"
+                      ? "success"
+                      : c.status === "fail"
+                        ? "error"
+                        : "warning"
+                  }
+                />
+              </div>
               <p>{c.message}</p>
               <Cite s={c.source} />
             </article>
@@ -369,9 +402,7 @@ export function Irc({
             <article>
               <h3>Load geometry sources</h3>
               {preview.sources.map((s) => (
-                <p key={s.location}>
-                  <Cite s={s} />
-                </p>
+                <Cite key={s.location} s={s} />
               ))}
               {preview.notes.map((s) => (
                 <p key={s}>{s}</p>

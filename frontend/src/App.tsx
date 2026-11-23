@@ -11,11 +11,7 @@ import {
 } from "@mui/material";
 import Layers from "@mui/icons-material/Layers";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
-import AppsOutlined from "@mui/icons-material/AppsOutlined";
 import DownloadOutlined from "@mui/icons-material/DownloadOutlined";
-import ShowChart from "@mui/icons-material/ShowChart";
-import LandscapeOutlined from "@mui/icons-material/LandscapeOutlined";
-import GridOnOutlined from "@mui/icons-material/GridOnOutlined";
 import {
   api,
   initial,
@@ -149,8 +145,8 @@ export default function App() {
               <Tab key={n} label={n} />
             ))}
           </Tabs>
-          <div className="engine">
-            <b /> HOSNT12
+          <div className="engine" title="Finite element solver">
+            HOSNT12
           </div>
         </Toolbar>
       </AppBar>
@@ -159,12 +155,8 @@ export default function App() {
           <>
             <div className="pageHead">
               <div>
-                <div className="crumb">Workbench / Structural analysis</div>
                 <h1>Plate solver</h1>
-                <p>
-                  Configure the plate model and explore its finite-element
-                  response.
-                </p>
+                <p>Finite element analysis of plate deflection and stress</p>
               </div>
               <Button
                 variant="contained"
@@ -198,7 +190,6 @@ export default function App() {
               <div className="output">
                 <section className="card">
                   <div className="cardHeading">
-                    <ShowChart />
                     <h2>Deflection field</h2>
                     <ToggleButtonGroup
                       exclusive
@@ -209,14 +200,8 @@ export default function App() {
                       }}
                       aria-label="Deflection view"
                     >
-                      <ToggleButton value="surface">
-                        <LandscapeOutlined />
-                        Surface
-                      </ToggleButton>
-                      <ToggleButton value="contour">
-                        <GridOnOutlined />
-                        Contour
-                      </ToggleButton>
+                      <ToggleButton value="surface">Surface</ToggleButton>
+                      <ToggleButton value="contour">Contour</ToggleButton>
                     </ToggleButtonGroup>
                   </div>
                   {r ? (
@@ -228,9 +213,8 @@ export default function App() {
                         : "Run an analysis to plot deflection."}
                     </div>
                   )}
-                  <div className="plotFoot">
+                  <div className="plotFoot" role="status">
                     <span>
-                      <i />
                       {busy
                         ? "Computing"
                         : dirty
@@ -240,7 +224,12 @@ export default function App() {
                             : "Awaiting solve"}
                     </span>
                     <span>
-                      {r ? r.mesh + " Q8 mesh · " + r.nodes + " nodes" : ""}
+                      {r
+                        ? r.mesh.replace("x", " × ") +
+                          " Q8 mesh · " +
+                          r.nodes +
+                          " nodes"
+                        : ""}
                       {r && surface ? " · z exaggerated" : ""}
                     </span>
                   </div>
@@ -256,9 +245,8 @@ export default function App() {
                     ])}
                   />
                 )}
-                <section className="card">
+                <section className="card response">
                   <div className="cardHeading">
-                    <AppsOutlined />
                     <h2>Response summary</h2>
                     <span className="meta">SI units</span>
                   </div>
@@ -274,7 +262,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <Section title="All dimensional & normalized metrics">
+                  <Section title="All result quantities">
                     <dl>
                       {keys.map((k) => (
                         <div className="dlrow" key={k}>

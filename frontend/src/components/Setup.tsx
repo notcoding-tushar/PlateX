@@ -1,5 +1,4 @@
 import { Button } from "@mui/material";
-import Tune from "@mui/icons-material/Tune";
 import type { Config, Patch } from "../api/client";
 import { Section, Select, Num } from "./Controls";
 
@@ -43,7 +42,6 @@ export function Setup({
   return (
     <aside className="card setup">
       <div className="cardHeading">
-        <Tune />
         <h2>Model setup</h2>
       </div>
       <Section title="Plate geometry" open>

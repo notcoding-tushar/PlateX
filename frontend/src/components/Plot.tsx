@@ -1,14 +1,19 @@
 import { useMemo } from "react";
 import type { Field } from "../api/client";
 import { fmt } from "../api/client";
+import { palette } from "../theme";
 
-const stops = [
-  [44, 100, 172],
-  [39, 162, 182],
-  [53, 201, 165],
-  [179, 223, 111],
-  [250, 215, 86],
+const ramp = [
+  palette.cream,
+  palette.peach,
+  palette.taupe,
+  palette.rose,
+  palette.plum,
 ];
+const stops = ramp.map((hex) =>
+  [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)),
+);
+
 function color(t: number) {
   const v = Math.max(0, Math.min(1, t)) * 4,
     i = Math.min(3, Math.floor(v));
@@ -44,7 +49,7 @@ export function Plot({ field, surface }: { field: Field; surface: boolean }) {
       peak = Math.max(Math.abs(low), Math.abs(high));
     const scale = surface
       ? Math.min(530 / (a * 0.9 + b), 185 / (a * 0.55 + b * 0.24))
-      : Math.min(540 / b, 210 / a);
+      : Math.min(540 / a, 210 / b);
     function project(x: number, y: number, w: number) {
       const X = (x - a / 2) * scale,
         Y = (y - b / 2) * scale;
@@ -53,7 +58,7 @@ export function Plot({ field, surface }: { field: Field; surface: boolean }) {
             330 + Y + 0.9 * X,
             153 - 0.24 * Y + 0.55 * X + (peak ? (w / peak) * 48 : 0),
           ]
-        : [330 + Y, 145 - X];
+        : [330 + X, 145 - Y];
     }
     const cells: {
       points: string;
@@ -117,18 +122,7 @@ export function Plot({ field, surface }: { field: Field; surface: boolean }) {
             : "Plan contour of transverse deflection"
         }
       >
-        <defs>
-          <pattern
-            id="dots"
-            width="15"
-            height="15"
-            patternUnits="userSpaceOnUse"
-          >
-            <circle cx="1" cy="1" r=".85" fill="#426066" />
-          </pattern>
-        </defs>
-        <rect width="660" height="290" fill="#19353e" />
-        <rect width="660" height="290" fill="url(#dots)" />
+        <rect width="660" height="290" fill={palette.drawing} />
         {drawing.cells.map((c, i) => (
           <g key={i}>
             <polygon
@@ -140,23 +134,23 @@ export function Plot({ field, surface }: { field: Field; surface: boolean }) {
             <path
               d={c.outline}
               fill="none"
-              stroke="#183e50"
-              strokeOpacity=".65"
+              stroke={palette.ink}
+              strokeOpacity=".35"
               strokeWidth=".8"
             />
           </g>
         ))}
-        <g transform="translate(42 244)" stroke="#b5cfcd" fill="none">
+        <g transform="translate(42 244)" stroke={palette.plum} fill="none">
           <path
             d={surface ? "M0 0l22 -6M0 0l15 10M0 0v-20" : "M0 0h24M0 0v-23"}
           />
         </g>
-        <g fill="#c9ddda" fontFamily="monospace" fontSize="11">
+        <g fill={palette.ink} fontFamily="monospace" fontSize="14">
           <text x="69" y="242">
-            y
+            {surface ? "y" : "x"}
           </text>
-          <text x={surface ? 60 : 39} y={surface ? 264 : 213}>
-            x
+          <text x={surface ? 60 : 39} y={surface ? 268 : 213}>
+            {surface ? "x" : "y"}
           </text>
           {surface && (
             <text x="39" y="216">
@@ -168,7 +162,9 @@ export function Plot({ field, surface }: { field: Field; surface: boolean }) {
       <div className="legend">
         <span>w (m)</span>
         <span>{fmt(drawing.low)}</span>
-        <i />
+        <i
+          style={{ background: `linear-gradient(90deg, ${ramp.join(", ")})` }}
+        />
         <span>{fmt(drawing.high)}</span>
       </div>
     </div>
