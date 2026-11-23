@@ -4,6 +4,9 @@ from hosnt12.irc import adapters
 from hosnt12.schemas import (
     AnalysisResult,
     IRCCheck,
+    IRCClimateOptions,
+    IRCClimateRequest,
+    IRCClimateResult,
     IRCComplianceRequest,
     IRCComplianceResult,
     IRCFlexibleRequest,
@@ -18,6 +21,16 @@ from hosnt12.schemas import (
 from hosnt12.solver import solve_hosnt12
 
 router = APIRouter(prefix="/api/irc")
+
+
+@router.get("/climate-options")
+def climate_options() -> IRCClimateOptions:
+    return adapters.climate_options()
+
+
+@router.post("/climate-temperature")
+def climate_temperature(body: IRCClimateRequest) -> IRCClimateResult:
+    return adapters.climate_temperature(body)
 
 
 @router.get("/options")

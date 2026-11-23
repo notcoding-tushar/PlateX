@@ -6,6 +6,10 @@ from ..schemas import (
     ContactPatch,
     FoundationConfig,
     IRCCheck,
+    IRCClimateOptions,
+    IRCClimateRequest,
+    IRCClimateResult,
+    IRCClimateZone,
     IRCComplianceRequest,
     IRCComplianceResult,
     IRCFlexibleRequest,
@@ -43,6 +47,27 @@ def options() -> list[IRCOption]:
 
 def _citation(key):
     return Citation.model_validate(irc.get(key).source, from_attributes=True)
+
+
+def climate_options() -> IRCClimateOptions:
+    provision = irc.get("58.temperature")
+    return IRCClimateOptions(
+        zones=[IRCClimateZone(zone=zone, region=region)
+               for zone, region in provision.data["regions"].items()],
+        source=_citation("58.temperature"),
+        notes=["Select the zone for the actual site: states may include multiple regions, hills or coastal areas.",
+               "Table values are fallback maximum slab differentials; use site measurements where available."],
+    )
+
+
+def climate_temperature(req: IRCClimateRequest) -> IRCClimateResult:
+    delta = irc.rigid_temperature_delta(req.zone, req.thickness_m * 1000,
+                                        period=req.period, interpolate=req.interpolate)
+    return IRCClimateResult(
+        delta_T_K=delta, source=_citation("58.temperature"),
+        notes=["Temperature is top minus bottom; the daytime profile is nonlinear and night is approximately -0.5 times day.",
+               "A linear through-depth profile is an approximation and does not include permanent curl."],
+    )
 
 
 def _contact(patch):
@@ -179,6 +204,8 @@ def prepare_rigid(req: IRCRigidRequest) -> IRCPrepared:
         raise ValueError("Effective subbase k requires a single slab; explicit layers would double-count support.")
     if req.raw and req.support == "effective":
         raise ValueError("Raw effective k is for audit only and cannot be used in an analysis.")
+    if req.explicit_dlc and req.temperature_zone is not None:
+        raise ValueError("IRC slab temperature differential cannot be applied across an explicit multi-layer stack; specify a project-specific through-depth profile instead.")
     soil_k = irc.rigid_cbr_to_k(req.cbr_percent, interpolate=req.interpolate, code=req.cbr_code)
     k = soil_k
     sources = [_citation("58.cbr_k" if req.cbr_code == "IRC:58-2015" else "15.cbr_k")]
@@ -220,6 +247,9 @@ def foundation_lookup(req: IRCFoundationLookup) -> dict:
 
 
 def prepare_flexible(req: IRCFlexibleRequest) -> IRCPrepared:
+    if any(abs(v) > 0 for coeffs in (req.base_config.t_coeffs, req.base_config.c_coeffs)
+           for v in (coeffs or ())):
+        raise ValueError("Clear thermal and moisture loading before preparing a flexible catalogue: layer expansion properties are not supplied by the catalogue.")
     profile = irc.catalogue_profile(req.category, req.cbr, req.traffic_msa)
     stack = irc.catalogue_layers(req.category, req.cbr, req.traffic_msa,
                                  bituminous_E_MPa=req.bituminous_E_MPa)

@@ -11,14 +11,23 @@ export interface Patch {
 export interface Vehicle {
   patches: Patch[];
 }
+export interface Layer {
+  h_bottom: number; h_top: number;
+  E1: number; E2: number; E3: number;
+  nu12: number; nu23: number; nu13: number;
+  G12: number; G13: number; G23: number;
+  theta_rad: number;
+  alpha1: number; alpha2: number; alpha3: number;
+  beta1: number; beta2: number; beta3: number;
+}
 export interface Config {
   a: number;
   b: number;
   h: number;
   m: number;
   n: number;
-  E: number;
-  nu: number;
+  E: number | null;
+  nu: number | null;
   material_mode: "isotropic" | "laminate";
   choicebc: number;
   load_case: "sinusoidal" | "uniform";
@@ -26,11 +35,11 @@ export interface Config {
   alpha: number;
   beta: number;
   thermal_distribution: "sinusoidal" | "uniform";
-  t_coeffs: number[];
-  c_coeffs: number[];
-  foundation: Partial<Record<"K0" | "J0" | "Kw" | "Kp", number>>;
+  t_coeffs: number[] | null;
+  c_coeffs: number[] | null;
+  foundation: Partial<Record<"K0" | "J0" | "Kw" | "Kp" | "Kp_y", number | null>>;
   vehicle_load: Vehicle;
-  layers?: unknown[] | null;
+  layers?: Layer[] | null;
   query_points?: unknown[];
 }
 export const initial: Config = {
@@ -120,6 +129,11 @@ export interface Preview {
   notes: string[];
   inside_plate: boolean;
 }
+export interface ClimateOptions {
+  zones: { zone: string; region: string }[];
+  source: Source;
+  notes: string[];
+}
 export interface Check {
   name: string;
   status: "pass" | "fail" | "needs_input";
@@ -157,6 +171,9 @@ export const api = {
   sweep: (c: Config, loads: Vehicle[]) =>
     request<Result[]>("solve-sweep", { base_config: c, load_cases: loads }),
   options: () => request<Option[]>("irc/options"),
+  climateOptions: () => request<ClimateOptions>("irc/climate-options"),
+  climateTemperature: (zone: string, thickness_m: number, period: string, interpolate: boolean) =>
+    request<{ delta_T_K: number; notes: string[]; source: Source }>("irc/climate-temperature", { zone, thickness_m, period, interpolate }),
   preview: (v: Placement) => request<Preview>("irc/preview-loads", v),
   check: (v: Placement) => request<Check[]>("irc/check", v),
   prepare: (mode: "rigid" | "flexible", body: unknown) =>

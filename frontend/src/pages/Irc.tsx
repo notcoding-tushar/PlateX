@@ -8,6 +8,7 @@ import {
   IconButton,
   Tabs,
   Tab,
+  TextField,
 } from "@mui/material";
 import Close from "@mui/icons-material/Close";
 import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
@@ -21,6 +22,7 @@ import {
   type Source,
   type Vehicle,
   type Config,
+  type ClimateOptions,
 } from "../api/client";
 import { palette } from "../theme";
 import { Num, Select, Section } from "../components/Controls";
@@ -82,6 +84,11 @@ export function Irc({
     [category, setCategory] = useState("a"), [bitumen, setBitumen] = useState(2000),
     [subgrade, setSubgrade] = useState(1), [support, setSupport] = useState("raw"),
     [thickness, setThickness] = useState(150), [zone, setZone] = useState("");
+  const [climate, setClimate] = useState<ClimateOptions | null>(null),
+    [site, setSite] = useState(""), [period, setPeriod] = useState("day"),
+    [interpolate, setInterpolate] = useState("no"),
+    [climateResult, setClimateResult] = useState<{ delta_T_K: number; notes: string[]; source: Source } | null>(null),
+    [climateError, setClimateError] = useState("");
   const mode = options.find((o) => o.case === p.case)?.mode ?? "flexible";
   useEffect(() => {
     let alive = true;
@@ -97,6 +104,21 @@ export function Irc({
       alive = false;
     };
   }, [retry]);
+  useEffect(() => {
+    let alive = true;
+    api.climateOptions().then(v => { if (alive) setClimate(v); }).catch(e => { if (alive) setClimateError(e.message); });
+    return () => { alive = false; };
+  }, [retry]);
+  useEffect(() => {
+    let alive = true;
+    setClimateResult(null);
+    setClimateError("");
+    if (mode !== "rigid" || !zone) return;
+    api.climateTemperature(zone, config.h, period, interpolate === "yes")
+      .then(v => { if (alive) setClimateResult(v); })
+      .catch(e => { if (alive) setClimateError(e.message); });
+    return () => { alive = false; };
+  }, [zone, config.h, period, interpolate, mode]);
   useEffect(() => {
     let alive = true;
     if (!options.length) return;
@@ -263,8 +285,6 @@ export function Irc({
               <Select label="Foundation support" value={support} set={setSupport}
                 items={[["raw", "Raw subgrade k"], ["effective", "Effective k with DLC"]]} />
               {support === "effective" && <Num label="DLC thickness (mm)" value={thickness} set={setThickness} />}
-              <Select label="Temperature zone" value={zone} set={setZone}
-                items={[["", "No temperature load"], ...["I", "II", "III", "IV", "V", "VI", "VII"].map((v): [string, string] => [v, v])]} />
             </> : <>
               <Select label="Catalogue category" value={category} set={setCategory}
                 items={["a", "b", "c", "d", "e", "f"].map(v => [v, v.toUpperCase()])} />
@@ -272,16 +292,32 @@ export function Irc({
               <Num label="Trial bituminous modulus (MPa)" value={bitumen} set={setBitumen} />
               <Num label="Finite subgrade thickness (m)" value={subgrade} set={setSubgrade} />
             </>}
-            <Button variant="outlined" onClick={async () => {
+            <Button variant="outlined" disabled={mode === "rigid" && (!preview || (!!zone && !climateResult))} onClick={async () => {
               try {
-                const base_config = { ...config, a: p.a, b: p.b, vehicle_load: preview?.vehicle_load ?? { patches: [] }, q0: 0 };
+                const base_config = { ...config, a: p.a, b: p.b, vehicle_load: preview?.vehicle_load ?? { patches: [] }, q0: 0,
+                  ...(mode === "rigid" && !zone ? { t_coeffs: null } : {}) };
                 const body = mode === "rigid"
-                  ? { base_config, cbr_percent: cbr, support, subbase_thickness_mm: thickness, temperature_zone: zone || null }
+                  ? { base_config, cbr_percent: cbr, support, subbase_thickness_mm: thickness, temperature_zone: zone || null, temperature_period: period, interpolate: interpolate === "yes" }
                   : { base_config, category, cbr, traffic_msa: traffic, bituminous_E_MPa: bitumen, subgrade_thickness_m: subgrade, x_m: p.x_m, y_m: p.y_m, ctb_fatigue: p.case === "dual_ctb" };
                 const prepared = await api.prepare(mode, body);
-                applyConfig(prepared.config, prepared.modeling_notes);
+                applyConfig(prepared.config, [...prepared.modeling_notes, ...(mode === "rigid" && zone ? [`IRC climate: ${site.trim() || "site not specified"}; zone ${zone}; ${period}.`] : [])]);
               } catch (e) { setErr(e instanceof Error ? e.message : "Could not prepare model"); }
             }}>Prepare model in solver</Button>
+          </Section>}
+          {mode === "rigid" && <Section title="Climatic variation · IRC:58">
+            <TextField label="State / site (for your records)" value={site} onChange={e => setSite(e.target.value)} />
+            <p className="meta">Select the zone that matches the site’s state, region, hills and coastline. A state may span several zones; site data takes precedence where available.</p>
+            <Select label="Site climate zone" value={zone} set={setZone}
+              items={[["", "No IRC temperature load"], ...(climate?.zones ?? []).map((z): [string, string] => [z.zone, `Zone ${z.zone}`])]} />
+            {zone && <>
+              <p className="meta">{climate?.zones.find(z => z.zone === zone)?.region}</p>
+              <Select label="Design condition" value={period} set={setPeriod} items={[["day", "Day"], ["night", "Night"]]} />
+              <Select label="Interpolate IRC tables" value={interpolate} set={setInterpolate} items={[["no", "Exact tabulated values"], ["yes", "Allow bounded interpolation"]]} />
+              <p className="meta">Slab thickness: {fmt(config.h * 1000)} mm, from Plate solver. Interpolation also applies to CBR and foundation lookups.</p>
+              {climateResult && <Alert severity="info">ΔT (top − bottom): {fmt(climateResult.delta_T_K)} K. {climateResult.notes.join(" ")}</Alert>}
+              {climateError && <Alert severity="error">{climateError}</Alert>}
+            </>}
+            {climate && <Cite s={climate.source} />}
           </Section>}
         </aside>
         <div className="card">

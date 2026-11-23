@@ -72,3 +72,33 @@ def test_sweep_retains_clipped_load(base):
     result = adapters.solve_placements(base, [placement])
     assert len(result) == 1
     assert result[0].modeling_notes
+
+
+def test_climate_options_and_day_night_api():
+    client = TestClient(app)
+    options = client.get("/api/irc/climate-options").json()
+    assert options["source"]["code"] == "IRC:58-2015"
+    assert len(options["zones"]) == 7
+    assert "Maharashtra" in next(z["region"] for z in options["zones"] if z["zone"] == "IV")
+    payload = {"zone": "IV", "thickness_m": 0.3}
+    day = client.post("/api/irc/climate-temperature", json={**payload, "period": "day"})
+    night = client.post("/api/irc/climate-temperature", json={**payload, "period": "night"})
+    assert day.json()["delta_T_K"] == 21
+    assert night.json()["delta_T_K"] == -10.5
+    assert client.post("/api/irc/climate-temperature", json={**payload, "thickness_m": 0.401}).status_code == 422
+
+
+def test_layer_validation_and_multilayer_thermal_guard(base):
+    flexible = adapters.prepare_flexible(IRCFlexibleRequest(base_config=base, category="a", cbr=5,
+        traffic_msa=10, bituminous_E_MPa=2000, subgrade_thickness_m=1, x_m=2, y_m=2))
+    data = flexible.config.model_dump()
+    data["layers"][0]["h_top"] -= 0.01
+    with pytest.raises(ValueError, match="contiguous"):
+        AnalysisConfig.model_validate(data)
+    with pytest.raises(ValueError, match="slab temperature differential"):
+        adapters.prepare_rigid(IRCRigidRequest(base_config=flexible.config, cbr_percent=10,
+                                               explicit_dlc=True, temperature_zone="IV"))
+    heated = base.model_copy(update={"t_coeffs": (0, 10, 0)})
+    with pytest.raises(ValueError, match="expansion properties"):
+        adapters.prepare_flexible(IRCFlexibleRequest(base_config=heated, category="a", cbr=5,
+            traffic_msa=10, bituminous_E_MPa=2000, subgrade_thickness_m=1, x_m=2, y_m=2))

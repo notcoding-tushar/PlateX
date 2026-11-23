@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from itertools import pairwise
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -169,6 +170,13 @@ class AnalysisConfig(BaseModel):
                 raise ValueError("Young's modulus E must be positive and finite.")
             if not (math.isfinite(self.nu) and -0.99 < self.nu < 0.4999):
                 raise ValueError("Poisson ratio must satisfy -0.99 < nu < 0.4999.")
+        if self.material_mode == "laminate" and self.layers:
+            ordered = sorted(self.layers, key=lambda layer: layer.h_bottom)
+            tol = max(1e-12, self.h * 1e-9)
+            if abs(ordered[0].h_bottom + self.h / 2) > tol or abs(ordered[-1].h_top - self.h / 2) > tol:
+                raise ValueError("Layers must span the full plate thickness from -h/2 to +h/2.")
+            if any(abs(a.h_top - b.h_bottom) > tol for a, b in pairwise(ordered)):
+                raise ValueError("Layers must be contiguous without gaps or overlaps.")
         for name, coeffs in (("t_coeffs", self.t_coeffs), ("c_coeffs", self.c_coeffs)):
             if coeffs is not None and not all(math.isfinite(v) for v in coeffs):
                 raise ValueError(f"{name} must contain three finite numbers.")
@@ -346,6 +354,30 @@ class IRCPrepared(BaseModel):
     sources: list[Citation]
     modeling_notes: list[str]
     details: dict = Field(default_factory=dict)
+
+
+class IRCClimateZone(BaseModel):
+    zone: str
+    region: str
+
+
+class IRCClimateOptions(BaseModel):
+    zones: list[IRCClimateZone]
+    source: Citation
+    notes: list[str]
+
+
+class IRCClimateRequest(BaseModel):
+    zone: str
+    thickness_m: float = Field(gt=0)
+    period: Literal["day", "night"] = "day"
+    interpolate: bool = False
+
+
+class IRCClimateResult(BaseModel):
+    delta_T_K: float
+    source: Citation
+    notes: list[str]
 
 
 class IRCComplianceRequest(BaseModel):

@@ -1,5 +1,5 @@
-import { Button } from "@mui/material";
-import type { Config, Patch } from "../api/client";
+import { Alert, Button } from "@mui/material";
+import type { Config, Layer, Patch } from "../api/client";
 import { Section, Select, Num } from "./Controls";
 
 export function Setup({
@@ -27,13 +27,13 @@ export function Setup({
     update({ vehicle_load: { patches: list } });
   const coeff = (key: "t_coeffs" | "c_coeffs", label: string) => (
     <div className="three">
-      {c[key].map((v, i) => (
+      {(c[key] ?? [0, 0, 0]).map((v, i) => (
         <Num
           key={i}
           label={label + (i + 1)}
           value={v}
           set={(n) =>
-            update({ [key]: c[key].map((old, j) => (i === j ? n : old)) })
+            update({ [key]: (c[key] ?? [0, 0, 0]).map((old, j) => (i === j ? n : old)) })
           }
         />
       ))}
@@ -69,7 +69,7 @@ export function Setup({
           <div className="two">
             <Num
               label="E (GPa)"
-              value={c.E / 1e9}
+              value={c.E == null ? null : c.E / 1e9}
               set={(v) => update({ E: v * 1e9 })}
             />
             {num("nu", "Poisson ratio ν")}
@@ -84,6 +84,33 @@ export function Setup({
           )}
         />
       </Section>
+      {c.material_mode === "laminate" && <Section title="Pavement layers" open>
+        <p className="meta">Layers use z coordinates in metres from the plate mid-plane. They must form a continuous stack from −h/2 to +h/2. Interfaces are bonded.</p>
+        {!c.layers?.length ? <Alert severity="info">The [0/90/0] benchmark preset is active. Prepare an IRC flexible model to inspect its pavement stack, or create a layer from the isotropic material values.</Alert> :
+          c.layers.map((layer, i) => {
+            const field = (key: keyof Layer, label: string, scale = 1) => <Num label={label}
+              value={layer[key] / scale} set={v => update({ layers: c.layers!.map((old, j) => j === i ? { ...old, [key]: v * scale } : old) })} />;
+            return <div className="patchForm" key={i}>
+              <strong>Layer {i + 1} · bottom to top</strong>
+              <div className="two">{field("h_bottom", "Bottom z (m)")}{field("h_top", "Top z (m)")}</div>
+              <div className="two">{field("E1", "E₁ (GPa)", 1e9)}{field("E2", "E₂ (GPa)", 1e9)}</div>
+              <div className="two">{field("nu12", "ν₁₂")}{field("theta_rad", "Orientation (rad)")}</div>
+              <div className="three">{field("G12", "G₁₂ (GPa)", 1e9)}{field("G13", "G₁₃ (GPa)", 1e9)}{field("G23", "G₂₃ (GPa)", 1e9)}</div>
+              <div className="two">{field("alpha1", "α₁ (1/K)")}{field("alpha2", "α₂ (1/K)")}</div>
+              <div className="two">{field("beta1", "β₁")}{field("beta2", "β₂")}</div>
+            </div>;
+          })}
+        {c.layers?.length ? <Button onClick={() => {
+          const layers = [...c.layers!], last = layers[layers.length - 1], mid = (last.h_top + last.h_bottom) / 2;
+          layers.splice(layers.length - 1, 1, { ...last, h_top: mid }, { ...last, h_bottom: mid });
+          update({ layers });
+        }}>Split top layer</Button> : <Button disabled={c.E == null || c.nu == null} onClick={() => {
+          const E = c.E!, nu = c.nu!, G = E / (2 * (1 + nu));
+          update({ layers: [{ h_bottom: -c.h/2, h_top: c.h/2, E1:E, E2:E, E3:E,
+            nu12:nu, nu23:nu, nu13:nu, G12:G, G13:G, G23:G, theta_rad:0,
+            alpha1:c.alpha, alpha2:c.alpha, alpha3:0, beta1:c.beta, beta2:c.beta, beta3:0 }] });
+        }}>Create layer from current isotropic material</Button>}
+      </Section>}
       <Section title="Mechanical pressure">
         <Select
           label="Distribution"
@@ -97,6 +124,7 @@ export function Setup({
         {num("q0", "Pressure q₀ (Pa)")}
       </Section>
       <Section title="Thermal & moisture">
+        <p className="meta">T(z) = T1 + (z/h) T2 + sin(πz/h) T3 / π. T2 is the linear top-to-bottom difference (K); T1 is the mean component. Moisture uses the same profile.</p>
         <Select
           label="In-plane distribution"
           value={c.thermal_distribution}
@@ -122,7 +150,7 @@ export function Setup({
       <Section title="Elastic foundation">
         <Select
           label="Parameter units"
-          value={"K0" in c.foundation ? "scaled" : "si"}
+          value={c.foundation.K0 != null || c.foundation.J0 != null ? "scaled" : "si"}
           set={(v) =>
             update({
               foundation: v === "scaled" ? { K0: 0, J0: 0 } : { Kw: 0, Kp: 0 },
@@ -135,7 +163,7 @@ export function Setup({
         />
         <div className="two">
           {(
-            ("K0" in c.foundation ? ["K0", "J0"] : ["Kw", "Kp"]) as Array<
+            (c.foundation.K0 != null || c.foundation.J0 != null ? ["K0", "J0"] : ["Kw", "Kp"]) as Array<
               keyof Config["foundation"]
             >
           ).map((k) => (
@@ -147,8 +175,10 @@ export function Setup({
             />
           ))}
         </div>
+        {c.foundation.K0 == null && c.foundation.J0 == null && <Num label="Kp y (N/m, blank uses Kp)" value={c.foundation.Kp_y ?? null} set={v => update({ foundation: { ...c.foundation, Kp_y: Number.isNaN(v) ? null : v } })} />}
+        <p className="meta">Kw is Winkler stiffness; Kp and Kp y are shear-layer stiffnesses. Blank Kp y uses Kp. Dimensionless coefficients override dimensional values.</p>
       </Section>
-      <Section title="Vehicle & patch loads">
+      <Section title="Traffic, vehicle & patch loads">
         {patches.map((p, i) => {
           const put = (v: Patch) =>
             setPatches(patches.map((old, j) => (j === i ? v : old)));
