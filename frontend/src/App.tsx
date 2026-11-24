@@ -145,9 +145,7 @@ export default function App() {
               <Tab key={n} label={n} />
             ))}
           </Tabs>
-          <div className="engine" title="Finite element solver">
-            HOSNT12
-          </div>
+          {tab !== 1 && <div className="engine" title={r?.engine}>HOSNT12 Q8</div>}
         </Toolbar>
       </AppBar>
       <main>

@@ -1,13 +1,10 @@
 /* Interface layout and engineering drawing surfaces */
 :root {
-  --line: #d9ccca;
-  --selection: #ecd5d3;
-  --raised:
-    5px 6px 14px rgb(102 84 94 / 13%), -4px -4px 12px rgb(255 250 247 / 80%);
-  --inset:
-    inset 2px 2px 5px rgb(102 84 94 / 13%),
-    inset -2px -2px 5px rgb(255 250 247 / 70%);
-  --mono: "IBM Plex Mono", Consolas, monospace;
+  --line: #dddedb;
+  --selection: #f3eee8;
+  --raised: 0 1px 3px rgb(25 30 32 / 4%);
+  --inset: none;
+  --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
 }
 * {
   box-sizing: border-box;
@@ -19,18 +16,19 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
-  line-height: 1.15;
+  font-family: inherit;
+  font-size: clamp(1.75rem, 3vw, 2rem);
+  line-height: 1.2;
   font-weight: 500;
 }
 h2 {
   font-size: 1rem;
   line-height: 1.5;
-  font-weight: 600;
+  font-weight: 500;
 }
 h3 {
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 p {
   color: var(--secondary);
@@ -40,12 +38,12 @@ p {
   background: var(--surface);
   color: var(--ink);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 3px 10px rgb(102 84 94 / 7%);
+  box-shadow: none;
 }
 .toolbar.MuiToolbar-root {
   width: min(1440px, 100%);
   margin-inline: auto;
-  min-height: 56px;
+  min-height: 64px;
   padding-inline: 32px;
   gap: 32px;
 }
@@ -62,8 +60,8 @@ p {
   color: var(--accent);
   width: 32px;
   height: 32px;
-  border-radius: 10px;
-  background: var(--cream);
+  border-radius: 4px;
+  background: transparent;
 }
 .brand svg,
 .MuiButton-startIcon > svg,
@@ -77,10 +75,7 @@ p {
 }
 .toolbar .MuiTabs-root {
   min-width: 0;
-  padding: 4px;
-  background: var(--drawing);
-  border-radius: 14px;
-  box-shadow: var(--inset);
+  padding: 0;
 }
 .toolbar .MuiTabs-list {
   gap: 4px;
@@ -89,17 +84,19 @@ p {
   color: var(--secondary);
   padding-inline: 12px;
   opacity: 1;
-  border-radius: 10px;
+  border-radius: 4px;
 }
 .toolbar .MuiTab-root:hover {
   background: var(--surface);
 }
 .toolbar .MuiTab-root.Mui-selected {
   color: var(--ink);
-  background: var(--cream);
+  background: transparent;
 }
 .toolbar .MuiTabs-indicator {
-  display: none;
+  display: block;
+  height: 2px;
+  background: var(--accent);
 }
 .engine {
   margin-inline-start: auto;
@@ -107,16 +104,16 @@ p {
   font: 0.8125rem var(--mono);
 }
 main {
-  max-width: 1440px;
+  max-width: 1520px;
   margin-inline: auto;
-  padding: 24px 32px 48px;
+  padding: 32px 32px 48px;
 }
 .pageHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .pageHead p {
   margin-top: 4px;
@@ -129,7 +126,7 @@ main {
 .workgrid {
   display: grid;
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-  gap: 20px;
+  gap: 24px;
   align-items: start;
 }
 .output {
@@ -141,7 +138,7 @@ main {
   min-width: 0;
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--raised);
 }
@@ -150,8 +147,8 @@ main {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 8px 16px;
+  min-height: 56px;
+  padding: 12px 20px;
 }
 .cardHeading .meta,
 .cardHeading .MuiToggleButtonGroup-root,
@@ -204,7 +201,7 @@ small {
   font-size: 0.8125rem;
 }
 .cardHeading .MuiToggleButton-root.Mui-selected {
-  background: var(--cream);
+  background: var(--mint);
   color: var(--ink);
   box-shadow: var(--inset);
 }
@@ -212,7 +209,7 @@ small {
 .plan {
   background: var(--drawing);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   margin-inline: 8px;
   overflow: hidden;
 }
@@ -222,6 +219,27 @@ small {
   width: 100%;
   max-height: 304px;
 }
+#deflection-plot {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+#deflection-plot:active {
+  cursor: grabbing;
+}
+.plotTools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 0;
+}
+.plotTools > button:last-child { margin-inline-start: auto; }
+.plotTools .MuiToggleButton-root { padding: 2px 10px; }
+.engineChoice { max-width: 320px; padding-block: 16px; }
+.elasticResults { padding: 12px 20px 20px; }
+.elasticResults small { display: block; font: 400 .8125rem system-ui, sans-serif; }
+.elasticResults tbody td { vertical-align: top; }
+.elasticResults { overflow-x: auto; }
 .plan {
   width: calc(100% - 16px);
 }
@@ -241,7 +259,7 @@ small {
   height: 8px;
   width: clamp(40px, 15vw, 112px);
   border-radius: 4px;
-  border: 1px solid var(--taupe);
+  border: 1px solid var(--stroke);
 }
 .plotFoot {
   justify-content: space-between;
@@ -324,14 +342,14 @@ small {
   border-color: transparent;
 }
 .checkHeading .MuiChip-root[data-status="pass"] {
-  background: var(--cream);
+  background: var(--mint);
 }
 .checkHeading .MuiChip-root[data-status="needs_input"] {
-  background: var(--peach);
+  background: var(--warning);
 }
 .checkHeading .MuiChip-root[data-status="fail"] {
   background: var(--selection);
-  border-color: var(--rose);
+  border-color: #a14339;
 }
 .citation {
   display: grid;
@@ -433,20 +451,36 @@ label input {
   width: 100%;
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid var(--taupe);
+  border: 1px solid var(--stroke);
   font: inherit;
+}
+label textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 0.875rem var(--mono);
+  resize: vertical;
 }
 .MuiOutlinedInput-root,
 label > input {
-  background: var(--drawing);
+  background: var(--surface);
   box-shadow: var(--inset);
 }
 .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-  border-color: var(--taupe);
+  border-color: var(--stroke);
 }
 .MuiOutlinedInput-root.Mui-focused {
   background: var(--surface);
 }
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--secondary);
+}
+.MuiButton-root { min-height: 36px; }
+.MuiToggleButton-root.Mui-selected { background: var(--selection); color: var(--ink); }
+.MuiDrawer-paper { background: var(--surface); }
 label {
   font-size: 0.875rem;
 }

@@ -2,6 +2,9 @@
 
 You are acting as a Senior Scientific Software Engineer and Civil/Structural FEA Specialist refactoring and extending the HOSNT12 plate finite-element solver.
 
+Update `LOG.MD` after each major change. Record the changes, verification results,
+meaningful limitations, and any pending work.
+
 ---
 
 ## 1. Golden Rules (Read Before Writing Any Code)

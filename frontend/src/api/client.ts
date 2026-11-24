@@ -80,6 +80,7 @@ export interface Field {
   w_m: number[];
 }
 export type Result = Record<Metric, number | null> & {
+  engine: "hosnt12_plate_q8";
   mesh: string;
   nodes: number;
   elements: number;
@@ -140,6 +141,49 @@ export interface Check {
   message: string;
   source: Source;
 }
+export interface DepthPoint {
+  x_m: number;
+  y_m: number;
+  depth_m: number;
+  side: "above" | "below";
+  label?: string;
+}
+export interface ElasticResponse extends DepthPoint {
+  layer: string;
+  w_m: number;
+  sigma_z_Pa: number;
+  sigma_r_Pa: number;
+  sigma_theta_Pa: number;
+  tau_rz_Pa: number;
+  eps_z: number;
+  eps_r: number;
+  eps_theta: number;
+  max_horizontal_strain: number;
+  max_horizontal_stress_Pa: number;
+}
+export interface ElasticRequest {
+  category: string;
+  cbr: number;
+  traffic_msa: number;
+  bituminous_E_MPa: number;
+  wheels: string;
+  ctb_fatigue: boolean;
+  wheel_force_N?: number;
+  pressure_Pa?: number;
+  spacing_m?: number;
+  points: DepthPoint[];
+}
+export interface ElasticResult {
+  engine: "layered_elastic_irc37";
+  critical: ElasticResponse[];
+  points: ElasticResponse[];
+  layers: {name: string; thickness_m: number | null; E_Pa: number; nu: number}[];
+  patches: Patch[];
+  pressure_Pa: number;
+  modeling_notes: string[];
+  checks: Check[];
+  sources: Source[];
+}
 export type Benchmark = {
   computed: Record<string, number>;
   reference: Record<string, number>;
@@ -167,6 +211,8 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   return res.json();
 }
 export const api = {
+  catalogue: () => request<{categories: string[]; cbr: number[]; traffic_msa: number[]}>("irc/flexible/catalogue-options"),
+  elastic: (body: ElasticRequest) => request<ElasticResult>("irc/flexible/layered-elastic", body),
   solve: (c: Config) => request<Result>("solve", c),
   sweep: (c: Config, loads: Vehicle[]) =>
     request<Result[]>("solve-sweep", { base_config: c, load_cases: loads }),

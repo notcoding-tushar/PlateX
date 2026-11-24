@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from hosnt12.irc import adapters
 from hosnt12.schemas import (
     AnalysisResult,
+    CatalogueOptions,
     IRCCheck,
     IRCClimateOptions,
     IRCClimateRequest,
@@ -17,6 +18,8 @@ from hosnt12.schemas import (
     IRCPreview,
     IRCRigidRequest,
     IRCSweepRequest,
+    LayeredElasticRequest,
+    LayeredElasticResult,
 )
 from hosnt12.solver import solve_hosnt12
 
@@ -63,6 +66,16 @@ def flexible(body: IRCFlexibleRequest) -> IRCPrepared:
     return adapters.prepare_flexible(body)
 
 
+@router.get("/flexible/catalogue-options")
+def catalogue_options() -> CatalogueOptions:
+    return adapters.catalogue_options()
+
+
+@router.post("/flexible/layered-elastic")
+def flexible_layered(body: LayeredElasticRequest) -> LayeredElasticResult:
+    return adapters.solve_flexible_layered(body)
+
+
 @router.post("/compliance")
 def compliance(body: IRCComplianceRequest) -> IRCComplianceResult:
     return adapters.compliance(body)
@@ -77,6 +90,7 @@ def bridge_guidance(width_m: float, vehicle: str = "A") -> dict:
 def solve(body: IRCPrepared) -> AnalysisResult:
     result = solve_hosnt12(body.config, include_field=True)
     result.modeling_notes.extend(body.modeling_notes)
+    result.sources.extend(body.sources)
     return result
 
 

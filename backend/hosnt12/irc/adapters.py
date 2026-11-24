@@ -2,8 +2,11 @@
 
 from ..schemas import (
     AnalysisConfig,
+    CatalogueOptions,
     Citation,
     ContactPatch,
+    DepthPoint,
+    ElasticLayer,
     FoundationConfig,
     IRCCheck,
     IRCClimateOptions,
@@ -19,12 +22,15 @@ from ..schemas import (
     IRCPrepared,
     IRCPreview,
     IRCRigidRequest,
+    LayeredElasticRequest,
+    LayeredElasticResult,
     LayerProperty,
     QueryPoint,
     VehicleLoad,
 )
 from ..solver import solve_sweep
 from . import irc_fea_library as irc
+from .layered_elastic import solve_layered_elastic
 
 # Menu identifiers select library operations. All numerical provisions stay in the vendor.
 _CASES = {
@@ -283,6 +289,67 @@ def prepare_flexible(req: IRCFlexibleRequest) -> IRCPrepared:
                        details={"profile": profile, "critical_locations": locations})
 
 
+def catalogue_options() -> CatalogueOptions:
+    scope = irc.get("37.catalogue_scope").data
+    return CatalogueOptions(categories=sorted(irc.FLEXIBLE_CATEGORIES),
+                            cbr=scope["CBR_percent"], traffic_msa=scope["traffic_msa"])
+
+
+def solve_flexible_layered(req: LayeredElasticRequest) -> LayeredElasticResult:
+    profile = irc.catalogue_profile(req.category, req.cbr, req.traffic_msa)
+    stack = irc.catalogue_layers(req.category, req.cbr, req.traffic_msa,
+                                 bituminous_E_MPa=req.bituminous_E_MPa)
+    checks = irc.check_flexible_stack(stack, category=req.category)
+    layers = []
+    for row in stack:
+        si = row.to_SI()
+        layers.append(ElasticLayer(name=row.name, thickness_m=si["thickness_m"],
+                                   E_Pa=si["material"]["E_Pa"], nu=si["material"]["nu"]))
+    standard = irc.flexible_standard_patches(ctb_fatigue=req.ctb_fatigue)
+    ref = standard[0].to_SI()
+    notes = ["Depth and displacement are positive down. Tensile stress and strain are positive.",
+             "Radial components refer to the line from the wheel-set centre to the point, with +x at the centre.",
+             "Interface responses are sampled at the stated positions. A spatial maximum and fatigue or rutting life require separate evaluation."]
+    if req.wheels == "single" and req.spacing_m is not None:
+        raise ValueError("Spacing applies to a dual pair only.")
+    offsets = [0.]
+    if req.wheels == "dual":
+        spacing = req.spacing_m or abs(standard[1].y_mm-standard[0].y_mm)/1000
+        offsets = [-spacing/2, spacing/2]
+    if req.wheels == "single" or any(v is not None for v in (req.wheel_force_N, req.pressure_Pa, req.spacing_m)):
+        notes.append("This wheel case is a user-selected variation of the IRC standard pair.")
+    wheels = [_contact(irc.circular_patch(req.wheel_force_N or ref["force_N"],
+                                          (req.pressure_Pa or ref["pressure_Pa"])/1e6,
+                                          y_mm=y*1000, label=f"Wheel {i+1}"))
+              for i, y in enumerate(offsets)]
+    targets = []
+    positions = [("Wheel centre", offsets[-1])]
+    if req.wheels == "dual":
+        positions.append(("Pair midpoint", 0.))
+    for loc in irc.critical_locations(stack):
+        for name, y in positions:
+            targets.append(DepthPoint(label=f"{name} · {loc['response']}", x_m=0, y_m=y,
+                                      depth_m=loc["depth_mm"]/1000,
+                                      side="below" if loc["side"] == "just_inside_subgrade" else "above"))
+    responses = solve_layered_elastic(layers, wheels, targets + req.points)
+    if layers[0].E_Pa < req.bituminous_E_MPa*1e6:
+        notes.append(f"Catalogue cap applied. Effective bituminous modulus is {layers[0].E_Pa/1e6:g} MPa.")
+    sources = list(dict.fromkeys([profile.pop("source"), irc.get("37.standard_load").source,
+                                  irc.get("37.catalogue_scope").source,
+                                  irc.get("37.analysis").source, *(row.material.source for row in stack),
+                                  *(check.source for check in checks)]))
+    if profile.get("nonstructural_interface") and irc.get("37.crack_relief").source not in sources:
+        sources.append(irc.get("37.crack_relief").source)
+    for provision in irc.PROVISIONS.values():
+        if provision.source in sources and provision.notes and provision.notes not in notes:
+            notes.append(provision.notes)
+    return LayeredElasticResult(profile=profile, layers=layers, patches=wheels, pressure_Pa=wheels[0].pressure_Pa,
+                                critical=responses[:len(targets)], points=responses[len(targets):],
+                                checks=[IRCCheck.model_validate(c, from_attributes=True) for c in checks],
+                                sources=[Citation.model_validate(s, from_attributes=True) for s in sources],
+                                modeling_notes=notes)
+
+
 def compliance(req: IRCComplianceRequest) -> IRCComplianceResult:
     functions = {"pqc": irc.check_pqc, "dlc": irc.check_dlc, "wbm": irc.check_wbm,
                  "dowel": irc.check_dowel, "grading": irc.check_grading}
@@ -311,4 +378,5 @@ def solve_placements(base_config, placements):
     results = solve_sweep(base_config, [p.vehicle_load for p in previews], include_field=True)
     for result, preview in zip(results, previews):
         result.modeling_notes.extend(preview.notes)
+        result.sources.extend(preview.sources)
     return results

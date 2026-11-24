@@ -80,6 +80,23 @@ hosnt12-fea-web/
 
 ---
 
+## IRC:37 layered-elastic response
+
+The IRC:37 workspace also has a dedicated response engine in
+`backend/hosnt12/irc/layered_elastic.py`. It accepts SI isotropic layers, a final
+half-space, circular contacts and depth queries. It matches displacements and
+tractions at perfectly bonded interfaces using decaying Fourier modes, then
+integrates the circular loading spectrum with Bessel kernels. Near the surface
+it integrates the direct Boussinesq disk field separately to resolve the
+contact traction discontinuity. Single-wheel tensors are rotated into a common
+frame before addition. The classical bonded-layer transform formulation is
+described in [Layered Systems Under Normal Surface Loads](https://onlinepubs.trb.org/onlinepubs/hrr/1968/228/228-004.pdf).
+
+The adapter resolves catalogue inputs, checks, critical query depths and
+provenance. FastAPI exposes this workflow through
+`POST /api/irc/flexible/layered-elastic`. The result declares
+`layered_elastic_irc37`. Finite-plate solves declare `hosnt12_plate_q8`.
+
 ## 4. Phased Delivery Roadmap
 
 | Phase | Scope | Exit Gate |

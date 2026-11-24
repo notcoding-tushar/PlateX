@@ -225,6 +225,8 @@ class AnalysisResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     field: DeflectionField | None = None
+    engine: Literal["hosnt12_plate_q8"] = "hosnt12_plate_q8"
+    sources: list[Citation] = Field(default_factory=list)
     mesh: str
     m: int
     n: int
@@ -347,6 +349,72 @@ class IRCFlexibleRequest(BaseModel):
     x_m: float
     y_m: float
     ctb_fatigue: bool = False
+
+
+class ElasticLayer(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+    name: str
+    thickness_m: float | None = Field(gt=0)
+    E_Pa: float = Field(gt=0)
+    nu: float = Field(gt=-1, lt=0.5)
+
+
+class DepthPoint(BaseModel):
+    """Depth positive down from the surface. The default interface limit is below."""
+
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+    label: str = ""
+    x_m: float
+    y_m: float
+    depth_m: float = Field(ge=0)
+    side: Literal["above", "below"] = "below"
+
+
+class ElasticResponse(DepthPoint):
+    layer: str
+    w_m: float
+    sigma_z_Pa: float
+    sigma_r_Pa: float
+    sigma_theta_Pa: float
+    tau_rz_Pa: float
+    eps_z: float
+    eps_r: float
+    eps_theta: float
+    max_horizontal_strain: float
+    max_horizontal_stress_Pa: float
+
+
+class CatalogueOptions(BaseModel):
+    categories: list[str]
+    cbr: list[float]
+    traffic_msa: list[float]
+
+
+class LayeredElasticRequest(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False, extra="forbid")
+    category: Literal["a", "b", "c", "d", "e", "f"]
+    cbr: float = Field(gt=0)
+    traffic_msa: float = Field(gt=0)
+    bituminous_E_MPa: float = Field(gt=0)
+    wheels: Literal["single", "dual"] = "dual"
+    ctb_fatigue: bool = False
+    wheel_force_N: float | None = Field(default=None, gt=0)
+    pressure_Pa: float | None = Field(default=None, gt=0)
+    spacing_m: float | None = Field(default=None, gt=0)
+    points: list[DepthPoint] = Field(default_factory=list, max_length=64)
+
+
+class LayeredElasticResult(BaseModel):
+    engine: Literal["layered_elastic_irc37"] = "layered_elastic_irc37"
+    profile: dict
+    layers: list[ElasticLayer]
+    patches: list[ContactPatch]
+    pressure_Pa: float
+    critical: list[ElasticResponse]
+    points: list[ElasticResponse]
+    checks: list[IRCCheck]
+    sources: list[Citation]
+    modeling_notes: list[str]
 
 
 class IRCPrepared(BaseModel):

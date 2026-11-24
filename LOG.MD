@@ -1,6 +1,6 @@
 # PlateX work log
 
-This log records implementation and verification through 24 November 2026. Test counts reflect the runs performed at each milestone.
+This log records implementation and verification through 25 November 2026. Test counts reflect the runs performed at each milestone. Update this file after each major change with the work completed, checks performed, and remaining limitations.
 
 ## 1. Refactored and verified the HOSNT12 solver
 
@@ -74,3 +74,36 @@ This log records implementation and verification through 24 November 2026. Test 
 - Rejected applying an IRC slab-only temperature differential across an explicit multilayer stack. Flexible catalogue preparation rejects existing nonzero thermal or moisture loading because the catalogue does not supply the required layer expansion properties. Documented the workflows and their limits in the [frontend README](frontend/README.md).
 - **Latest verification:** 59 pytest tests passed; the CLI self-test passed 44 of 44 checks; `python -m hosnt12.cli --validate 10` completed; the vendored IRC self-test, Ruff, frontend type-check and production build, and `git diff --check` passed. The 10×10 paper report still shows a maximum 18.478% discrepancy in the cited Table 3 normalized axial-stress case; completion of the validation command does not mean exact agreement with the published table. The API tests were run outside the sandbox with approval because its FastAPI test client hung inside it. Starlette emitted its existing test-client deprecation warning.
 - **Working-tree status at this entry:** the pavement and climate changes and this log update are uncommitted on `phase-2-irc-web`. The IRC library remains unchanged.
+
+## 9. Investigated IITPAVE and added a launcher
+
+- Inspected the local IITPAVE Java interface and native executable with REA at the user's request. Documented observed execution, inputs, outputs, tests, engineering interpretation, and unresolved questions in [IITPAVE comparison report.md](IITPAVE%20comparison%20report.md). The report distinguishes observed behavior from inferred layered-elastic methods.
+- Reproduced the supplied seven-layer output with a copy of the executable in an isolated working directory. A separate test showed an unexpected change in vertical stress and displacement at one interface. Its cause remains unresolved.
+- Added [Run IITPAVE.cmd](Run%20IITPAVE.cmd) to launch the Java interface with the required classpath and use the Git-ignored `external_tools/IITPAVE_work` directory for generated files. The executable and quadrature file are copied there when needed. The launcher supports `--check` for prerequisites.
+- **Verification at this milestone:** the launcher prerequisite check succeeded and the input form opened. A complete analysis through the GUI was not tested. The report describes a separate successful native executable run.
+
+## 10. Added IRC:37 layered-elastic analysis and refreshed the UI
+
+- Added [layered_elastic.py](backend/hosnt12/irc/layered_elastic.py), a bonded isotropic layered half-space solver using Fourier modes and Bessel integration with a direct Boussinesq disk field near the surface. It supports one or two circular wheel loads, one-sided interface queries, displacement, stresses, strains, and horizontal principal response. Depth and displacement are positive downwards and tensile stresses and strains are positive.
+- Extended the IRC adapter and schemas to obtain catalogue sections, material properties, standard contacts, critical depths, checks, warnings, and citations from the vendored library. The dedicated `POST /api/irc/flexible/layered-elastic` endpoint returns `layered_elastic_irc37`; plate results identify `hosnt12_plate_q8`. The finite-plate path retains its model limitation notice and citations.
+- Added a focused IRC Flexible engine selector, catalogue and wheel controls, critical response table, optional query point, stack checks, and source details. The default dual-wheel results sample the wheel centre and pair midpoint. Added surface rotation, pan, reset, and keyboard controls to the plate graph. Refreshed the palette and typography and updated the architecture and frontend instructions.
+- **Verification at this milestone:** 72 pytest tests passed, including analytical circular-load, interface continuity, dual-wheel superposition, catalogue, API, and legacy regression tests. All 288 catalogue sections solved for both standard and CTB pressure cases, totaling 576 solves. The IRC library self-test, Ruff, frontend production build, and 44 HOSNT12 CLI self-checks passed. Browser checks covered plot controls, the layered solve, mobile width, and engine switching. Starlette emitted a test-client deprecation warning.
+- **Limitations:** sampled response locations do not establish a spatial maximum. Fatigue and rutting life require separate evaluation. The comparison against one recorded IITPAVE case supplements the analytical and continuity tests and does not establish general equivalence.
+
+## 11. Prepared temporary Cloudflare sharing
+
+- Added [scripts/share.mjs](scripts/share.mjs) and frontend README instructions. On Windows the launcher checks the local virtual environment, frontend dependencies, and `external_tools/cloudflare/cloudflared.exe`, builds the frontend, serves the app and API on localhost port 18573, and starts a Cloudflare Quick Tunnel. Ctrl+C stops its child processes. The Cloudflare executable is in the Git-ignored external tools directory.
+- The initial executable download stalled, and a later session had a usable executable. A subsequent launch reported port 18573 already in use by an existing sharing session. A separate Quick Tunnel was started against that existing PlateX server. The address supplied by the user returned a DNS error; the replacement address returned HTTP 200 for the page and `status: ok` from the public API when checked. Quick Tunnel URLs are temporary and may change when restarted.
+- **Verification:** `node --check scripts/share.mjs` and `git diff --check` passed. The replacement public URL and API were checked at the time of sharing; their current availability has not been checked in this entry.
+
+## Current working tree
+
+- As of 25 November 2026, the current branch is `phase-2-irc37-layered-elastic`. The layered-elastic, UI, documentation, and sharing-launcher changes remain uncommitted.
+- The working tree also contains untracked `desktop.ini`, root `node_modules/`, and `pnpm-lock.yaml`. Their origin and intended disposition have not been established. They were left in place.
+
+## 12. Refined the workbench interface
+
+- Applied the Unslop skill by Damir Sokolovsky to the shared Material UI theme and controls. The design uses neutral technical-drawing surfaces, an ochre action accent, a blue deflection scale, quieter navigation, consistent panel and control radii, and clearer spacing and typography.
+- Updated shared input, button, toggle, focus, drawer, table, and text-area styling across the Plate Solver, IRC, and validation workflows. Added horizontal scrolling to the critical-response table for small screens. Existing analysis controls and results remain available.
+- **Verification:** the frontend TypeScript and production build passed. An isolated headless browser completed a plate solve, IRC layered-elastic analysis, and validation benchmark and checked all three navigation screens for horizontal overflow at 390 px. The desktop plate solver was visually reviewed before and after the change.
+- The selected interface font falls back to locally installed system fonts when Instrument Sans is unavailable. No font files were added.

@@ -14,11 +14,41 @@ From the repository root, run `npm start`. Open the local URL printed by Vite, u
 
 The development and preview servers forward `/api` to port 8000. FastAPI publishes its OpenAPI explorer at `http://127.0.0.1:8000/docs`.
 
+For a temporary Windows demo, place the official Cloudflare Windows executable at
+`external_tools/cloudflare/cloudflared.exe`, then run `node scripts/share.mjs`
+from the repository root. Share the printed `trycloudflare.com` address. Keep
+the terminal and this computer running, and press Ctrl+C to stop sharing. The
+address is accessible to anyone who has it. The launcher builds the frontend
+and runs a local API on port 18573. It requires the project's existing virtual
+environment and frontend dependencies.
+
 `npm run build` type-checks the application and creates `dist/`. For production, serve these static assets alongside a reverse proxy for `/api` to FastAPI. The initial plate is the mechanical Zidi reference configuration. Sweep travel translates all contacts along the x axis between the initial and final positions. IRC previews describe unfactored footprints; transferring them retains the current material and supports.
 
 ## Pavement and climate inputs
 
-In **IRC Pavement & Bridge**, select a rigid or flexible case, place its traffic contacts, then open **Pavement analysis model** to prepare the model. Flexible catalogue sections require an explicit trial bituminous modulus and a finite subgrade thickness; they approximate a finite bonded plate and do not replace the IRC layered-elastic subgrade strain calculation. On the Plate Solver, **Pavement layers** exposes the resulting stack and its material properties. Layer coordinates must cover the full plate thickness continuously, from `-h/2` to `+h/2`.
+In **IRC Pavement & Bridge → IRC Flexible**, choose **IRC:37 Layered Elastic**.
+Select the catalogue section, CBR, traffic, bottom DBM modulus and wheel case,
+then select **Run layered analysis**. The results show the signed strain at the
+bituminous base and subgrade surface, and horizontal tensile stress and strain
+at the base of a CTB where present. The default dual case samples one wheel
+centre and the pair midpoint. Wheel load overrides and an additional x/y/depth
+query are available in their own sections. Run the CTB fatigue pressure case
+separately when that loading is required.
+
+The API accepts the same inputs at `POST /api/irc/flexible/layered-elastic`.
+For example, send `{"category":"a","cbr":5,"traffic_msa":10,"bituminous_E_MPa":2000,"wheels":"dual","points":[{"x_m":0,"y_m":0,"depth_m":0.2,"side":"below"}]}`.
+The API returns metres, pascals and dimensionless strains. The readout converts
+them to mm, kPa and microstrain. Depth and displacement increase downwards.
+Stress and strain are positive in tension. Horizontal principal values are the
+largest signed eigenvalues in the horizontal plane at each sampled point.
+Use **Stack checks & source notes** for the underlying trial-section provisions.
+
+Choose **HOSNT12 Q8 finite plate** for a finite section with edge supports.
+Place the contacts and open **Pavement analysis model** to prepare a plate with
+an explicit subgrade thickness. On the Plate Solver, **Pavement layers** shows
+the stack from `-h/2` to `+h/2`. Drag the surface to rotate, or select **Pan**
+to reposition the plot. Contour view supports panning. With the plot focused,
+arrow keys move the view, Shift+arrows pan and Home restores the initial view.
 
 The **Elastic foundation** section accepts dimensional Winkler and Pasternak stiffnesses or dimensionless coefficients. IRC rigid preparation offers raw subgrade support or a lumped effective DLC support. Do not represent the same DLC both explicitly and through effective support. **Traffic, vehicle & patch loads** includes contact patches and moving-position sweeps.
 

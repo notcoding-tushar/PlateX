@@ -26,6 +26,7 @@ import {
 } from "../api/client";
 import { palette } from "../theme";
 import { Num, Select, Section } from "../components/Controls";
+import { LayeredElastic } from "./LayeredElastic";
 
 const initial: Placement = {
   case: "dual",
@@ -90,6 +91,8 @@ export function Irc({
     [climateResult, setClimateResult] = useState<{ delta_T_K: number; notes: string[]; source: Source } | null>(null),
     [climateError, setClimateError] = useState("");
   const mode = options.find((o) => o.case === p.case)?.mode ?? "flexible";
+  const [flexEngine, setFlexEngine] = useState("layered");
+  const layered = mode === "flexible" && flexEngine === "layered";
   useEffect(() => {
     let alive = true;
     api
@@ -121,7 +124,7 @@ export function Irc({
   }, [zone, config.h, period, interpolate, mode]);
   useEffect(() => {
     let alive = true;
-    if (!options.length) return;
+    if (!options.length || layered) return;
     setErr("");
     setPreview(null);
     setChecks([]);
@@ -143,7 +146,7 @@ export function Irc({
       alive = false;
       clearTimeout(timer);
     };
-  }, [p, options]);
+  }, [p, options, layered]);
   const update = (v: Partial<Placement>) => {
     setPreview(null);
     setChecks([]);
@@ -177,26 +180,30 @@ export function Irc({
       <div className="pageHead">
         <div>
           <h1>IRC Pavement &amp; Bridge</h1>
-          <p>Place pavement tyres and bridge loads on the analysis plate</p>
+          <p>{layered ? "Flexible pavement response over a semi-infinite subgrade" : "Place pavement tyres and bridge loads on the analysis plate"}</p>
         </div>
-        <Button
+        {!layered && <Button
           variant="outlined"
           startIcon={<FactCheckOutlined />}
           onClick={open}
         >
           IRC Checks &amp; Provenance
-        </Button>
+        </Button>}
       </div>
       <Tabs value={mode} onChange={(_, v: string) => {
         const c = options.find((o) => o.mode === v);
         if (c) update({ case: c.case, ...(v === "bridge"
           ? { a: 24, b: 7, x_m: 1, y_m: 3.5 }
           : { a: 4.5, b: 3.5, x_m: 0.6, y_m: 1.75 }) });
-      }} aria-label="IRC applications">
+      }} aria-label="IRC applications" variant="scrollable" scrollButtons="auto">
         <Tab value="rigid" label="IRC Rigid" />
         <Tab value="flexible" label="IRC Flexible" />
         <Tab value="bridge" label="IRC Bridge" />
       </Tabs>
+      {mode === "flexible" && <div className="engineChoice">
+        <Select label="Analysis engine" value={flexEngine} set={v => { setFlexEngine(v); setErr(""); }}
+          items={[["layered", "IRC:37 Layered Elastic"], ["plate", "HOSNT12 Q8 finite plate"]]} />
+      </div>}
       {err && (
         <Alert
           severity="error"
@@ -205,7 +212,7 @@ export function Irc({
           {err}
         </Alert>
       )}
-      <div className="workgrid">
+      {layered ? <LayeredElastic /> : <div className="workgrid">
         <aside className="card setup">
           <div className="cardHeading">
             <h2>Load placement</h2>
@@ -343,7 +350,7 @@ export function Irc({
                     <path
                       d="M16 0H0V16"
                       fill="none"
-                      stroke={palette.taupe}
+                      stroke={palette.line}
                       strokeWidth=".65"
                       strokeOpacity=".55"
                     />
@@ -355,7 +362,7 @@ export function Irc({
                   width={w}
                   height={h}
                   fill="url(#planGrid)"
-                  stroke={palette.plum}
+                  stroke={palette.teal}
                   strokeWidth="1.2"
                 />
                 {preview.vehicle_load.patches.map((v, i) => {
@@ -367,8 +374,8 @@ export function Irc({
                       cx={x}
                       cy={y}
                       r={v.radius_m! * scale}
-                      fill={palette.peach}
-                      stroke={palette.plum}
+                      fill={palette.sand}
+                      stroke={palette.teal}
                       strokeWidth="1"
                     />
                   ) : (
@@ -378,13 +385,13 @@ export function Irc({
                       y={y - (v.width_m! * scale) / 2}
                       width={v.length_m! * scale}
                       height={v.width_m! * scale}
-                      fill={palette.peach}
-                      stroke={palette.plum}
+                      fill={palette.sand}
+                      stroke={palette.teal}
                       strokeWidth="1"
                     />
                   );
                 })}
-                <g fill="none" stroke={palette.plum} strokeWidth="1">
+                <g fill="none" stroke={palette.teal} strokeWidth="1">
                   <path d={`M${x0} ${y0 + h + 8}v16m0 -8h${w}m0 -8v16`} />
                   <path d={`M${x0 - 8} ${y0}h-16m8 0v${h}m-8 0h16`} />
                 </g>
@@ -438,8 +445,8 @@ export function Irc({
             </div>
           )}
         </div>
-      </div>
-      <Drawer anchor="right" open={drawer} onClose={close}>
+      </div>}
+      <Drawer anchor="right" open={drawer && !layered} onClose={close}>
         <div className="drawer">
           <div className="cardHeading">
             <h2>IRC checks &amp; provenance</h2>
