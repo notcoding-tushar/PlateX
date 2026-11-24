@@ -9,7 +9,15 @@ from .materials import (
     reference_flexural_rigidity,
 )
 from .mesh import build_mesh
-from .schemas import ContactPatch, PaperComparison, PaperValidationReport, PaperValidationRequest, VehicleLoad
+from .schemas import (
+    ContactPatch,
+    H2MeshResult,
+    H2Refinement,
+    PaperComparison,
+    PaperValidationReport,
+    PaperValidationRequest,
+    VehicleLoad,
+)
 from .solver import solve_hosnt12_legacy as solve_hosnt12
 
 # Zidi et al. (2014), homogeneous ceramic plate, SSSS, a = 1, b = 3a, h = a/10, sinusoidal q0.
@@ -146,6 +154,24 @@ def _observed_order(v1: float, v2: float, v3: float, n1: int, n2: int, n3: int) 
         else:
             lo = mid
     return 0.5 * (lo + hi)
+
+
+def h2_stress_refinement() -> H2Refinement:
+    """Sample the same top-centre stress on three even meshes and estimate its mesh limit."""
+    meshes = (10, 14, 20)
+    rows = []
+    for mesh in meshes:
+        result = solve_paper_case(100, 0, mesh, hygrothermal=True)
+        rows.append(H2MeshResult(mesh=mesh, w_bar=result["w_bar"], sigma_x_bar=result["sigma_x_bar"]))
+    coarse, medium, fine = rows
+    order = _observed_order(coarse.sigma_x_bar, medium.sigma_x_bar, fine.sigma_x_bar, *meshes)
+    estimate = None
+    if math.isfinite(order):
+        estimate = fine.sigma_x_bar + (fine.sigma_x_bar - medium.sigma_x_bar) / (
+            (fine.mesh / medium.mesh) ** order - 1.0
+        )
+    return H2Refinement(meshes=rows, stress_reference=PAPER_TABLE_3_TSDT[100, 0][1],
+                        observed_order=order if estimate is not None else None, stress_limit_estimate=estimate)
 
 
 def run_convergence_study(meshes=(4, 6, 8, 10, 12, 16, 20, 24, 28, 32)) -> None:

@@ -194,6 +194,12 @@ export interface PaperReport {
   comparisons: PaperComparison[]; tolerance_pct: number; passed_cases: string[]; failed_cases: string[];
   mean_error_pct: number; worst: PaperComparison;
 }
+export interface H2Refinement {
+  meshes: { mesh: number; w_bar: number; sigma_x_bar: number }[];
+  stress_reference: number;
+  observed_order: number | null;
+  stress_limit_estimate: number | null;
+}
 export type Benchmark = {
   computed: Record<string, number>;
   reference: Record<string, number>;
@@ -222,6 +228,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   return res.json();
 }
 export const api = {
+  h2Refinement: () => request<H2Refinement>("validation/h2-refinement"),
   catalogue: () => request<{categories: string[]; cbr: number[]; traffic_msa: number[]}>("irc/flexible/catalogue-options"),
   elastic: (body: ElasticRequest) => request<ElasticResult>("irc/flexible/layered-elastic", body),
   solve: (c: Config) => request<Result>("solve", c),

@@ -297,6 +297,19 @@ class PaperValidationReport(BaseModel):
     worst: PaperComparison
 
 
+class H2MeshResult(BaseModel):
+    mesh: int
+    w_bar: float
+    sigma_x_bar: float
+
+
+class H2Refinement(BaseModel):
+    meshes: list[H2MeshResult]
+    stress_reference: float
+    observed_order: float | None
+    stress_limit_estimate: float | None
+
+
 class IRCPlacement(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     case: str

@@ -32,7 +32,7 @@ workbench = components.declare_component(f"platex_workbench_{build_id}", path=st
 
 # Only the same local routes exposed by the React client may be requested.
 GET = {"irc/options", "irc/climate-options", "irc/flexible/catalogue-options",
-       "validation?hygrothermal=true", "validation?hygrothermal=false"}
+       "validation?hygrothermal=true", "validation?hygrothermal=false", "validation/h2-refinement"}
 POST = {"validation/suite", "solve", "solve-sweep", "irc/preview-loads", "irc/check", "irc/rigid",
         "irc/flexible", "irc/climate-temperature", "irc/compliance", "irc/flexible/layered-elastic"}
 

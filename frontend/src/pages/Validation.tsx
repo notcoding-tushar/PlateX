@@ -3,6 +3,7 @@ import { Alert, Button } from "@mui/material";
 import {
   api,
   fmt,
+  type H2Refinement,
   type PaperReport,
   type Result,
 } from "../api/client";
@@ -14,6 +15,50 @@ const quantity = {
   tau_xy_bar: "τ̄xy — Dimensionless longitudinal shear stress",
   tau_xz_bar: "τ̄xz — Dimensionless transverse shear stress",
 };
+
+function H2StressStudy() {
+  const [study, setStudy] = useState<H2Refinement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const run = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      setStudy(await api.h2Refinement());
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const errorPct = (value: number, reference: number) => fmt(100 * Math.abs((value - reference) / reference));
+  return <section>
+    <h3>H2 axial stress · mesh refinement</h3>
+    <p>At the centre of the top face, thermal expansion offsets most of the stress from the
+      computed strain. The remaining axial stress is small, so its percentage error is sensitive
+      to the mesh. Compare it with the centre deflection as the mesh gets finer.</p>
+    <Button variant="outlined" onClick={run} disabled={busy}>
+      {busy ? "Solving three meshes…" : "Run H2 mesh refinement"}
+    </Button>
+    {error && <Alert severity="error">{error}</Alert>}
+    {study && <>
+      <p>Published axial stress σ̄x = {study.stress_reference.toFixed(5)}</p>
+      <div style={{ overflowX: "auto" }}><table>
+        <thead><tr><th>Mesh</th><th>Deflection w̄</th><th>Axial stress σ̄x</th><th>Stress error (%)</th></tr></thead>
+        <tbody>{study.meshes.map(row => <tr key={row.mesh}>
+          <th scope="row">{row.mesh} × {row.mesh}</th><td>{row.w_bar.toPrecision(8)}</td>
+          <td>{row.sigma_x_bar.toPrecision(8)}</td><td>{errorPct(row.sigma_x_bar, study.stress_reference)}</td>
+        </tr>)}</tbody>
+      </table></div>
+      {study.stress_limit_estimate !== null && study.observed_order !== null
+        ? <p>Estimated stress at zero mesh spacing (Richardson extrapolation) <strong>{study.stress_limit_estimate.toPrecision(8)}</strong>.
+          The observed convergence order is {study.observed_order.toFixed(2)}.
+          The estimate differs from the published value by {errorPct(study.stress_limit_estimate, study.stress_reference)}%.</p>
+        : <p>The three meshes did not yield a consistent convergence order for extrapolation.</p>}
+      <p className="meta">The benchmark pass/fail summary uses the original 10 × 10 solve.</p>
+    </>}
+  </section>;
+}
 
 export function Validation({ result }: { result: Result | null }) {
   const [tolerance, setTolerance] = useState(0.1),
@@ -124,6 +169,7 @@ export function Validation({ result }: { result: Result | null }) {
             <p>Mean absolute percentage error {fmt(bench.mean_error_pct)}%<br/>
               Maximum error {fmt(bench.worst.error_pct)}% · {bench.worst.case} · {quantity[bench.worst.parameter]}</p>
           </>}
+          <H2StressStudy />
         </section>
       </div>
     </>
