@@ -133,3 +133,7 @@ This log records implementation and verification through 25 November 2026. Test 
 Matrix & Validation runs eight independent 10 × 10 TSDT cases and reports all 32 signed comparisons to Tables 2 and 3. The editable tolerance defaults to the 0.1% used for the existing Table 2 deflection self-test. A case passes when all four comparisons pass. The report documents the inferred Table 3 pressure and the zero moisture expansion of the ceramic.
 
 The validation API returned all 32 comparisons. Eight individual comparisons and zero complete cases passed at 0.1%. Mean absolute percentage error was 1.359497%; the largest was 18.478045% for H2 axial stress (computed −0.022337016, published −0.02740). All 72 regression tests passed and the Streamlit frontend build succeeded.
+
+## Refresh deployed workbench assets
+
+The public deployment linked to the migration branch but displayed the old single-case benchmark. Streamlit now serves the component under a name derived from the packaged HTML digest. A changed JS or CSS bundle reference therefore produces a fresh component entry URL on deployment.

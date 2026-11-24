@@ -1,5 +1,6 @@
 """Launch the shared PlateX workbench inside Streamlit."""
 import asyncio
+import hashlib
 import sys
 from pathlib import Path
 
@@ -23,7 +24,11 @@ st.markdown("""
 .stMainBlockContainer {max-width: 1520px; padding: 3.5rem 0 0;}
 </style>
 """, unsafe_allow_html=True)
-workbench = components.declare_component("platex_workbench", path=str(ROOT / "streamlit_workbench"))
+workbench_dir = ROOT / "streamlit_workbench"
+# The HTML entry point names the hashed JS and CSS bundles. Give it a new
+# component URL when those references change, including on Community Cloud.
+build_id = hashlib.sha256((workbench_dir / "index.html").read_bytes()).hexdigest()[:12]
+workbench = components.declare_component(f"platex_workbench_{build_id}", path=str(workbench_dir))
 
 # Only the same local routes exposed by the React client may be requested.
 GET = {"irc/options", "irc/climate-options", "irc/flexible/catalogue-options",
