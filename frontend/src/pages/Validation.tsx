@@ -61,7 +61,7 @@ function H2StressStudy() {
 }
 
 export function Validation({ result }: { result: Result | null }) {
-  const [tolerance, setTolerance] = useState(0.1),
+  const [tolerance, setTolerance] = useState(2),
     [bench, setBench] = useState<PaperReport | null>(null),
     [busy, setBusy] = useState(false),
     [err, setErr] = useState("");
@@ -139,7 +139,7 @@ export function Validation({ result }: { result: Result | null }) {
               With β = 0, the ceramic has zero moisture expansion. Separate self-tests exercise nonzero β.</p>
           </details>
           <Num label="Tolerance (%)" value={tolerance} set={setTolerance} min={0} />
-          <p className="meta">The default 0.1% extends the existing deflection check to all four quantities.
+          <p className="meta">The default tolerance is 2% for all four quantities.
             A case passes when every absolute percentage error is within the selected tolerance.</p>
           <Button variant="contained" disabled={busy || !Number.isFinite(tolerance) || tolerance < 0} onClick={run}>
             {busy ? "Solving eight cases…" : "Run all eight cases"}

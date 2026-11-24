@@ -140,6 +140,8 @@ The public deployment linked to the migration branch but displayed the old singl
 
 ## H2 axial stress mesh refinement
 
+The validation tolerance default was subsequently changed to 2% at the user's request in both the frontend and API request model. The default model value was verified and the Streamlit frontend rebuilt successfully.
+
 Matrix & Validation now runs an optional H2 study with the same top-centre sampling point and Table 3 inputs on 10 × 10, 14 × 14 and 20 × 20 meshes. Direct normalized axial stresses were −0.022337016, −0.024775616 and −0.026061202. The stress differences from the published −0.02740 decreased from 18.478% to 9.578% to 4.886%. The observed order of 2.02 gives a Richardson estimate of −0.027277305 (0.448% difference). The paper value is used only for comparison. The original suite still scores its 32 direct 10 × 10 results.
 
 The thermal strain term nearly cancels the total-strain contribution to the top-face stress. At 10 × 10 the normalized centre deflection was 0.97211727 versus 0.97216 in Table 3. All 72 regression tests and 44 CLI self-checks passed, as did the IRC self-test, Ruff and the Streamlit frontend build. The Table 3 pressure remains a replication assumption.
