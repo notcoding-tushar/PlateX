@@ -127,3 +127,9 @@ This log records implementation and verification through 25 November 2026. Test 
 - Made the existing React workbench the default Streamlit interface, including plate setup, surface/contour interactions, export actions, IRC applications and matrix diagnostics. The sidebar retains the native forms and advanced JSON views.
 - Added a Streamlit build target and packaged its static assets. The component queues requests per session and uses the existing validated API routes in process. Frontend source changes require rebuilding the packaged assets.
 - Verified the build, a live 341-node plate result, surface/contour switching, the IRC dual-wheel response table and the mechanical Table 2 benchmark in the local Streamlit browser. The numerical modules were untouched.
+
+## Zidi paper validation on the website
+
+Matrix & Validation runs eight independent 10 × 10 TSDT cases and reports all 32 signed comparisons to Tables 2 and 3. The editable tolerance defaults to the 0.1% used for the existing Table 2 deflection self-test. A case passes when all four comparisons pass. The report documents the inferred Table 3 pressure and the zero moisture expansion of the ceramic.
+
+The validation API returned all 32 comparisons. Eight individual comparisons and zero complete cases passed at 0.1%. Mean absolute percentage error was 1.359497%; the largest was 18.478045% for H2 axial stress (computed −0.022337016, published −0.02740). All 72 regression tests passed and the Streamlit frontend build succeeded.

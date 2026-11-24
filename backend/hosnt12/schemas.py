@@ -270,6 +270,33 @@ class BenchmarkResult(BaseModel):
     reference: dict[str, float]
 
 
+class PaperValidationRequest(BaseModel):
+    # The original Table 2 deflection self-test uses a relative tolerance of 0.001.
+    tolerance_pct: float = Field(default=0.1, ge=0, allow_inf_nan=False)
+
+
+class PaperComparison(BaseModel):
+    case: str
+    table: int
+    K0: int
+    J0: int
+    parameter: str
+    reference: float
+    computed: float
+    absolute_error: float
+    error_pct: float
+    passed: bool
+
+
+class PaperValidationReport(BaseModel):
+    tolerance_pct: float
+    comparisons: list[PaperComparison]
+    passed_cases: list[str]
+    failed_cases: list[str]
+    mean_error_pct: float
+    worst: PaperComparison
+
+
 class IRCPlacement(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     case: str

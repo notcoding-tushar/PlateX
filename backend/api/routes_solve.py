@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from hosnt12.schemas import AnalysisConfig, AnalysisResult, BenchmarkResult, SweepRequest
+from hosnt12.schemas import AnalysisConfig, AnalysisResult, BenchmarkResult, PaperValidationReport, PaperValidationRequest, SweepRequest
 from hosnt12.solver import solve_hosnt12, solve_sweep
-from hosnt12.validation import PAPER_TABLE_2_TSDT, PAPER_TABLE_3_TSDT, solve_paper_case
+from hosnt12.validation import PAPER_TABLE_2_TSDT, PAPER_TABLE_3_TSDT, paper_validation_report, solve_paper_case
 
 router = APIRouter(prefix="/api")
 
@@ -25,3 +25,8 @@ def benchmark(hygrothermal: bool = False) -> BenchmarkResult:
     return BenchmarkResult(
         computed={name: values[name] for name in names}, reference=dict(zip(names, table[0, 0]))
     )
+
+
+@router.post("/validation/suite")
+def benchmark_suite(body: PaperValidationRequest) -> PaperValidationReport:
+    return paper_validation_report(body)

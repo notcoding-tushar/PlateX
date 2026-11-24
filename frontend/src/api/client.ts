@@ -185,6 +185,15 @@ export interface ElasticResult {
   checks: Check[];
   sources: Source[];
 }
+export interface PaperComparison {
+  case: string; table: number; K0: number; J0: number;
+  parameter: "w_bar" | "sigma_x_bar" | "tau_xy_bar" | "tau_xz_bar";
+  reference: number; computed: number; absolute_error: number; error_pct: number; passed: boolean;
+}
+export interface PaperReport {
+  comparisons: PaperComparison[]; tolerance_pct: number; passed_cases: string[]; failed_cases: string[];
+  mean_error_pct: number; worst: PaperComparison;
+}
 export type Benchmark = {
   computed: Record<string, number>;
   reference: Record<string, number>;
@@ -227,6 +236,7 @@ export const api = {
   prepare: (mode: "rigid" | "flexible", body: unknown) =>
     request<{ config: Config; modeling_notes: string[]; sources: Source[]; details: unknown }>("irc/" + mode, body),
   compliance: (kind: string, args: unknown) => request<{ checks: Check[]; options: Record<string, number>[]; sources: Source[] }>("irc/compliance", { kind, arguments: args }),
+  benchmarkSuite: (tolerance: number) => request<PaperReport>("validation/suite", { tolerance_pct: tolerance }),
   benchmark: (thermal: boolean) =>
     request<Benchmark>("validation?hygrothermal=" + thermal),
 };

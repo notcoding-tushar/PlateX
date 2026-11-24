@@ -3,23 +3,28 @@ import { Alert, Button } from "@mui/material";
 import {
   api,
   fmt,
-  metrics,
-  type Metric,
-  type Benchmark,
+  type PaperReport,
   type Result,
 } from "../api/client";
-import { Select } from "../components/Controls";
+import { Num } from "../components/Controls";
+
+const quantity = {
+  w_bar: "w̄ — Dimensionless deflection",
+  sigma_x_bar: "σ̄x — Dimensionless axial stress",
+  tau_xy_bar: "τ̄xy — Dimensionless longitudinal shear stress",
+  tau_xz_bar: "τ̄xz — Dimensionless transverse shear stress",
+};
 
 export function Validation({ result }: { result: Result | null }) {
-  const [thermal, setThermal] = useState(false),
-    [bench, setBench] = useState<Benchmark | null>(null),
+  const [tolerance, setTolerance] = useState(0.1),
+    [bench, setBench] = useState<PaperReport | null>(null),
     [busy, setBusy] = useState(false),
     [err, setErr] = useState("");
   const run = async () => {
     setBusy(true);
     setErr("");
     try {
-      setBench(await api.benchmark(thermal));
+      setBench(await api.benchmarkSuite(tolerance));
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -77,50 +82,48 @@ export function Validation({ result }: { result: Result | null }) {
         </section>
         <section className="card inner">
           <h2>Zidi et al. (2014)</h2>
-          <p>10 × 10 mesh · Simply supported · K₀ = J₀ = 0</p>
-          <fieldset disabled={busy}>
-            <Select
-              label="Published TSDT benchmark"
-              value={thermal ? "3" : "2"}
-              set={(v) => {
-                setThermal(v === "3");
-                setBench(null);
-              }}
-              items={[
-                ["2", "Table 2 · Mechanical"],
-                ["3", "Table 3 · Hygrothermal"],
-              ]}
-            />
-          </fieldset>
-          {thermal && (
-            <p>Table 3 uses the archive’s assumed pressure of 100 kPa.</p>
-          )}
-          <Button variant="contained" disabled={busy} onClick={run}>
-            {busy ? "Solving…" : "Run benchmark"}
+          <p>10 × 10 mesh · Simply supported · Homogeneous ceramic · TSDT</p>
+          <details><summary>Replication settings and pressure convention</summary>
+            <p>Plate dimensions 1 × 3 × 0.1 m, E = 117 GPa, ν = 1/3, α = 7.11 × 10⁻⁶ /K and β = 0.
+              The paper specifies the geometric ratios. The mesh and dimensions are replication settings.
+              Each case uses sinusoidal pressure and dimensionless foundation parameters K₀ and J₀.</p>
+            <p>Both tables print q₀ = 100, while the text gives a general convention of 100 GPa.
+              This replication uses 100 Pa for Table 2 and assumes 100 kPa for Table 3.
+              The authors’ intended Table 3 unit is unresolved.</p>
+            <p>Table 2 has zero environmental loads. Table 3 uses t = (0, 10, 0) and c = (0, 100, 0).
+              With β = 0, the ceramic has zero moisture expansion. Separate self-tests exercise nonzero β.</p>
+          </details>
+          <Num label="Tolerance (%)" value={tolerance} set={setTolerance} min={0} />
+          <p className="meta">The default 0.1% extends the existing deflection check to all four quantities.
+            A case passes when every absolute percentage error is within the selected tolerance.</p>
+          <Button variant="contained" disabled={busy || !Number.isFinite(tolerance) || tolerance < 0} onClick={run}>
+            {busy ? "Solving eight cases…" : "Run all eight cases"}
           </Button>
           {err && <Alert severity="error">{err}</Alert>}
-          {bench && (
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Quantity</th>
-                  <th scope="col" className="computed">
-                    Computed
-                  </th>
-                  <th scope="col">Published</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(bench.computed).map(([k, v]) => (
-                  <tr key={k}>
-                    <th scope="row">{metrics[k as Metric]?.[0] ?? k}</th>
-                    <td className="computed">{fmt(v)}</td>
-                    <td>{fmt(bench.reference[k])}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          {bench && <>
+            <p>Completed run · {bench.tolerance_pct}% tolerance</p>
+            {[2, 3].map(table => <section key={table}>
+              <h3>{table === 2 ? "Mechanical Loading — Table 2" : "Hygrothermal Loading — Table 3"}</h3>
+              <div style={{ overflowX: "auto" }}><table>
+                <thead><tr>{["Case", "K₀", "J₀", "Output parameter", "Published", "Computed", "Absolute error",
+                  "Error (%)", "Status"].map(title => <th key={title} scope="col">{title}</th>)}</tr></thead>
+                <tbody>{bench.comparisons.filter(row => row.table === table).map(row =>
+                  <tr key={row.case + row.parameter}>
+                    <th scope="row">{row.case}</th><td>{row.K0}</td><td>{row.J0}</td>
+                    <td>{quantity[row.parameter]}</td><td>{row.reference.toFixed(5)}</td>
+                    <td className="computed">{row.computed.toPrecision(8)}</td>
+                    <td>{fmt(row.absolute_error)}</td><td>{fmt(row.error_pct)}</td>
+                    <td><strong>{row.passed ? "Pass" : "Fail"}</strong></td>
+                  </tr>)}</tbody>
+              </table></div>
+            </section>)}
+            <h3>Validation summary</h3>
+            <p>{bench.passed_cases.length + bench.failed_cases.length} cases · {bench.comparisons.length} parameter comparisons</p>
+            <p>Passed ({bench.passed_cases.length}) · {bench.passed_cases.join(", ") || "None"}<br/>
+              Failed ({bench.failed_cases.length}) · {bench.failed_cases.join(", ") || "None"}</p>
+            <p>Mean absolute percentage error {fmt(bench.mean_error_pct)}%<br/>
+              Maximum error {fmt(bench.worst.error_pct)}% · {bench.worst.case} · {quantity[bench.worst.parameter]}</p>
+          </>}
         </section>
       </div>
     </>

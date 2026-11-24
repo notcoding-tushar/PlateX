@@ -9,7 +9,7 @@ from .materials import (
     reference_flexural_rigidity,
 )
 from .mesh import build_mesh
-from .schemas import ContactPatch, VehicleLoad
+from .schemas import ContactPatch, PaperComparison, PaperValidationReport, PaperValidationRequest, VehicleLoad
 from .solver import solve_hosnt12_legacy as solve_hosnt12
 
 # Zidi et al. (2014), homogeneous ceramic plate, SSSS, a = 1, b = 3a, h = a/10, sinusoidal q0.
@@ -61,7 +61,39 @@ def solve_paper_case(K0, J0, mesh, hygrothermal=False, m=None, n=None) -> dict:
     if hygrothermal:
         return solve_hosnt12(q0=PAPER_Q0_TABLE_3, alpha=PAPER_ALPHA, beta=0.0,
                              t_coeffs=(0, 10, 0), c_coeffs=(0, 100, 0), **kw)
-    return solve_hosnt12(q0=PAPER_Q0_TABLE_2, **kw)
+    return solve_hosnt12(q0=PAPER_Q0_TABLE_2, alpha=PAPER_ALPHA, beta=0.0,
+                         t_coeffs=(0, 0, 0), c_coeffs=(0, 0, 0), **kw)
+
+
+def paper_validation_report(request: PaperValidationRequest) -> PaperValidationReport:
+    """Compare eight independent 10 x 10 TSDT solves using unrounded values."""
+    comparisons = []
+    passed_cases, failed_cases = [], []
+    for table, prefix, references in ((2, "M", PAPER_TABLE_2_TSDT), (3, "H", PAPER_TABLE_3_TSDT)):
+        for index, ((k0, j0), reference_row) in enumerate(references.items(), 1):
+            case = f"{prefix}{index}"
+            solved = solve_paper_case(k0, j0, 10, hygrothermal=(table == 3))
+            rows = []
+            for parameter, reference in zip(_NORMALISED, reference_row, strict=True):
+                computed = solved[parameter]
+                absolute_error = abs(computed - reference)
+                error_pct = 100 * absolute_error / abs(reference)
+                rows.append(PaperComparison(
+                    case=case, table=table, K0=k0, J0=j0, parameter=parameter, reference=reference,
+                    computed=computed, absolute_error=absolute_error, error_pct=error_pct,
+                    passed=error_pct <= request.tolerance_pct,
+                ))
+            comparisons.extend(rows)
+            if all(row.passed for row in rows):
+                passed_cases.append(case)
+            else:
+                failed_cases.append(case)
+    return PaperValidationReport(
+        tolerance_pct=request.tolerance_pct, comparisons=comparisons,
+        passed_cases=passed_cases, failed_cases=failed_cases,
+        mean_error_pct=math.fsum(row.error_pct for row in comparisons) / len(comparisons),
+        worst=max(comparisons, key=lambda row: row.error_pct),
+    )
 
 
 def run_paper_validation(mesh: int = 10) -> None:
