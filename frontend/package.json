@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:streamlit": "tsc --noEmit && vite build --mode streamlit --base ./ --outDir ../streamlit_workbench --emptyOutDir"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

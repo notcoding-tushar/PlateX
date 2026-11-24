@@ -114,3 +114,16 @@ This log records implementation and verification through 25 November 2026. Test 
 - Added root requirements and documented startup and current scope in ARCHITECTURE.md. Existing frontend and API remain intact.
 - Verification: `.venv\Scripts\python.exe -m pytest -v` passed 72 tests (one Starlette deprecation warning); IRC library self-test passed. Installed Streamlit 1.67.0 in the local virtual environment. Streamlit server started successfully outside the sandbox; Streamlit AppTest successfully submitted the example plate and layered-elastic forms.
 - Limitations: JSON forms require knowledge of schemas; dedicated rigid/bridge, sweep, compliance and validation screens remain to be migrated. Full user-facing feature parity and deployment have not been verified.
+
+## Structured Streamlit controls (2026-11-25)
+
+- Replaced JSON-only primary workflows with form tabs for plate geometry, mesh, supports, isotropic or explicit ply properties, pressure, contact patch, foundation and thermal inputs; complete JSON remains available for advanced options. Isotropic E and nu must be entered explicitly.
+- Added IRC:37 catalogue, wheel configuration and optional depth-query forms. The adapter still supplies its critical interface points. Displayed result metrics, response and layer tables, model notes and checks; added a nodal deflection contour and sampled vertical stress/strain versus depth plots. Plots use returned values and close their figures. Last successful results persist in session state.
+- Verification: `.venv\Scripts\python.exe -m pytest -v` passed all 72 tests (one existing Starlette deprecation warning). Streamlit AppTest passed isotropic and laminate solves, a rectangular patch with thermal loading, layered-elastic solve, graph rendering, missing-material validation, and session persistence. Local Streamlit health endpoint returned `ok`.
+- Numerical solver and IRC modules were not changed. Contour values between nodes are interpolated for display. Depth scatter points can represent different horizontal positions or interface sides. Full rigid/bridge, sweep and compliance workflows remain outside the dedicated Streamlit forms; advanced plate JSON retains access to additional plate options.
+
+## Shared React workbench in Streamlit
+
+- Made the existing React workbench the default Streamlit interface, including plate setup, surface/contour interactions, export actions, IRC applications and matrix diagnostics. The sidebar retains the native forms and advanced JSON views.
+- Added a Streamlit build target and packaged its static assets. The component queues requests per session and uses the existing validated API routes in process. Frontend source changes require rebuilding the packaged assets.
+- Verified the build, a live 341-node plate result, surface/contour switching, the IRC dual-wheel response table and the mechanical Table 2 benchmark in the local Streamlit browser. The numerical modules were untouched.

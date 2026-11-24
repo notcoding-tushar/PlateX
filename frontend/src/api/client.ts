@@ -1,3 +1,4 @@
+import { componentRequest } from "./streamlit";
 export interface Patch {
   shape: "rectangle" | "circle";
   x_m: number;
@@ -189,6 +190,7 @@ export type Benchmark = {
   reference: Record<string, number>;
 };
 async function request<T>(path: string, body?: unknown): Promise<T> {
+  if (import.meta.env.MODE === "streamlit") return componentRequest<T>(path, body);
   const res = await fetch(
     (import.meta.env.VITE_API_BASE_URL ?? "") + "/api/" + path,
     body === undefined

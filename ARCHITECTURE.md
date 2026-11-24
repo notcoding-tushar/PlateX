@@ -108,4 +108,6 @@ provenance. FastAPI exposes this workflow through
 
 ## Streamlit entry point
 
-Install Python 3.10+ dependencies with `pip install -r requirements.txt`, then run `streamlit run app.py` from the repository root. The Streamlit interface submits typed JSON configurations directly to the existing finite-plate and IRC:37 layered-elastic engines. SI units are used except where the schema explicitly names MPa. Existing FastAPI and React code remains available. The initial Streamlit interface does not yet expose the dedicated IRC rigid/bridge preparation, sweeps, compliance or benchmark workflows as interactive forms; the backend remains available for those workflows.
+From the repository root install `pip install -r requirements.txt` and run `streamlit run app.py`. The default analysis workbench uses the same React components and styles as the standalone frontend. The Streamlit component forwards workbench requests to the existing FastAPI routes in process. Each session tracks its latest response. The sidebar also offers the native structured forms and advanced JSON inputs.
+
+The deployable frontend assets live in `streamlit_workbench/`. After changing the React source, run `npm ci` and `npm run build:streamlit` in `frontend/` and include the rebuilt assets with the source. A Python-only Streamlit host can then serve the workbench directly.
