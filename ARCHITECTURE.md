@@ -105,3 +105,7 @@ provenance. FastAPI exposes this workflow through
 | **Phase 2** | Build FastAPI layer (`backend/api/`) with `/api/solve`, `/api/solve-sweep`, OpenAPI schema | `pytest` API integration tests green; OpenAPI JSON clean |
 | **Phase 3** | Build React + TypeScript + MUI frontend (`frontend/`) with interactive workbench, 2D load preview, deflection plots | End-to-end solve in browser matches CLI results |
 | **Phase 4** | Wire `irc_fea_library.py` via `adapters.py` + `/api/irc/*` endpoints + MUI IRC Pavement/Bridge & Compliance Drawer | `irc_fea_library.py --self-test` + `test_irc_adapters.py` green |
+
+## Streamlit entry point
+
+Install Python 3.10+ dependencies with `pip install -r requirements.txt`, then run `streamlit run app.py` from the repository root. The Streamlit interface submits typed JSON configurations directly to the existing finite-plate and IRC:37 layered-elastic engines. SI units are used except where the schema explicitly names MPa. Existing FastAPI and React code remains available. The initial Streamlit interface does not yet expose the dedicated IRC rigid/bridge preparation, sweeps, compliance or benchmark workflows as interactive forms; the backend remains available for those workflows.

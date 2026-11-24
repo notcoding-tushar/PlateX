@@ -107,3 +107,10 @@ This log records implementation and verification through 25 November 2026. Test 
 - Updated shared input, button, toggle, focus, drawer, table, and text-area styling across the Plate Solver, IRC, and validation workflows. Added horizontal scrolling to the critical-response table for small screens. Existing analysis controls and results remain available.
 - **Verification:** the frontend TypeScript and production build passed. An isolated headless browser completed a plate solve, IRC layered-elastic analysis, and validation benchmark and checked all three navigation screens for horizontal overflow at 390 px. The desktop plate solver was visually reviewed before and after the change.
 - The selected interface font falls back to locally installed system fonts when Instrument Sans is unavailable. No font files were added.
+
+## Streamlit migration (2026-11-25)
+
+- Added root Streamlit entry point with submitted JSON forms for HOSNT12 plate and IRC:37 layered-elastic configurations, and cached catalogue options. Solver and IRC calculation code was not modified.
+- Added root requirements and documented startup and current scope in ARCHITECTURE.md. Existing frontend and API remain intact.
+- Verification: `.venv\Scripts\python.exe -m pytest -v` passed 72 tests (one Starlette deprecation warning); IRC library self-test passed. Installed Streamlit 1.67.0 in the local virtual environment. Streamlit server started successfully outside the sandbox; Streamlit AppTest successfully submitted the example plate and layered-elastic forms.
+- Limitations: JSON forms require knowledge of schemas; dedicated rigid/bridge, sweep, compliance and validation screens remain to be migrated. Full user-facing feature parity and deployment have not been verified.
