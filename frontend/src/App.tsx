@@ -22,12 +22,13 @@ import { Setup } from "./components/Setup";
 import { Section, Select, download } from "./components/Controls";
 import { Irc } from "./pages/Irc";
 import { Validation } from "./pages/Validation";
+import { Landing } from "./pages/Landing";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { usePavementAnalysis } from "./state/usePavementAnalysis";
 
 const keys = Object.keys(metrics) as Metric[];
 export default function App() {
-  const [tab, setTab] = useState(0),
+  const [tab, setTab] = useState(-1),
     [visited, setVisited] = useState(false),
     [drawer, setDrawer] = useState(false);
   const { c, set, results, index, select, busy, error, surface, setSurface, count,
@@ -91,18 +92,21 @@ export default function App() {
             scrollButtons="auto"
             aria-label="Workbench navigation"
           >
+            <Tab value={-1} label="Overview" />
             {[
               "Pavement Layer Solver",
               "IRC Pavement & Bridge",
               "Matrix & Validation",
             ].map((n) => (
-              <Tab key={n} label={n} />
+              <Tab key={n} value={["Pavement Layer Solver", "IRC Pavement & Bridge", "Matrix & Validation"].indexOf(n)} label={n} />
             ))}
           </Tabs>
-          {tab !== 1 && <div className="engine" title={r?.engine}>HOSNT12 Q8</div>}
+          {tab !== 1 && tab !== -1 && <div className="engine" title={r?.engine}>HOSNT12 Q8</div>}
         </Toolbar>
       </AppBar>
       <main>
+        {tab === -1 && <Landing result={r ?? null} openSolver={() => setTab(0)}
+          openIrc={() => { setVisited(true); setTab(1); }} openValidation={() => setTab(2)} />}
         {tab === 0 && (
           <>
             <div className="pageHead">

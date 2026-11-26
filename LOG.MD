@@ -191,3 +191,9 @@ The thermal strain term nearly cancels the total-strain contribution to the top-
 - Improved toggle and button target sizes, focus indicators, numeric alignment and mobile input sizing. Kept the plot responsive and exposed initial loading and analysis errors to assistive technology.
 - Rebuilt the Streamlit bundle and visually checked the live desktop solver after the update. The production frontend build passed.
 - Mobile rendering, keyboard interaction and frame-by-frame motion were not independently verified in this pass.
+
+## 2026-11-27 — Pavement workbench landing page
+
+- Added an Overview landing page introducing finite pavement sections, IRC loading and layered-elastic analysis, validation, and the project's numerical work. The hero displays the current computed deflection field.
+- Added direct navigation to the solver, IRC workflows and validation. Built the Streamlit component and verified the landing page and solver navigation in the local Streamlit app.
+- The public Streamlit app remains on the previous deployed build pending approval to reboot its existing sessions.

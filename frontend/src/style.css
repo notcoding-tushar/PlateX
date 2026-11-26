@@ -632,3 +632,35 @@ p { text-wrap: pretty; }
   .plotTools { flex-wrap: wrap; }
   .plotFoot { gap: 4px 16px; }
 }
+
+
+/* Overview */
+.landing { margin: -24px 0 0; }
+.landingHero { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); gap: 48px; align-items: center; min-height: 520px; padding: 48px 0 64px; }
+.landingIntro { max-width: 520px; }
+.landingKicker, .landingSectionTitle > span { color: #82502e; font-size: .875rem; font-weight: 600; }
+.landingIntro h1 { margin: 20px 0; font-size: clamp(2.6rem, 4.5vw, 4.8rem); line-height: 1.05; letter-spacing: -.035em; font-weight: 500; }
+.landingIntro p { max-width: 42ch; font-size: 1.125rem; line-height: 1.55; margin-bottom: 28px; }
+.landingIntro .MuiButton-root { min-height: 48px; padding: 0 20px; }
+.landingFigure { background: #f8faf8; border: 1px solid #d9deda; min-width: 0; }
+.landingFigureHead { display: flex; justify-content: space-between; gap: 16px; padding: 16px 20px; color: #45524f; font-size: .8125rem; }
+.landingFigure .plotArea { background: #edf3f1; }
+.landingFigure > p { padding: 12px 20px; font-size: .8125rem; }
+.landingFigureEmpty { min-height: 300px; display: grid; place-items: center; color: var(--secondary); }
+.landingCapabilities { border-top: 1px solid var(--line); padding: 64px 0; display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr); gap: 48px; }
+.landingSectionTitle h2, .landingAchievement h2 { margin-top: 16px; font-size: clamp(1.75rem, 3vw, 2.6rem); line-height: 1.18; max-width: 16ch; }
+.landingCapabilityList { display: grid; gap: 28px; }
+.landingCapabilityList article { border-top: 1px solid var(--line); padding-top: 20px; }
+.landingCapabilityList h3 { font-size: 1.125rem; }
+.landingCapabilityList p { max-width: 65ch; margin-top: 8px; }
+.landingCapabilityList .MuiButton-root { margin: 8px 0 0 -8px; }
+.landingAchievement { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; background: #e4ebe8; padding: 48px; }
+.landingAchievement p { max-width: 60ch; margin-bottom: 16px; }
+.landingAchievement .MuiButton-root { margin-top: 8px; }
+@media (max-width: 800px) {
+  .landingHero, .landingCapabilities, .landingAchievement { grid-template-columns: 1fr; gap: 28px; }
+  .landingHero { padding: 36px 0 48px; min-height: 0; }
+  .landingIntro h1 { font-size: clamp(2.5rem, 9vw, 3.5rem); }
+  .landingCapabilities { padding: 48px 0; }
+  .landingAchievement { padding: 28px; }
+}
