@@ -560,3 +560,75 @@ label {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Pavement analysis workbench — restrained drafting surfaces */
+:root {
+  --line: #d9deda;
+  --selection: #ece9e4;
+  --raised: none;
+  --mono: "Instrument Sans", "Segoe UI", sans-serif;
+}
+body { font-variant-numeric: tabular-nums; }
+.topbar.MuiAppBar-root { background: #f9faf8; }
+.toolbar.MuiToolbar-root { max-width: 1520px; gap: 40px; }
+.brand { letter-spacing: 0; }
+.engine { font-family: inherit; }
+main { padding-top: 24px; }
+.pageHead { margin-bottom: 20px; }
+.pageHead h1 { font-size: 1.625rem; }
+.pageHead p { max-width: 65ch; font-size: .875rem; }
+.workgrid { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: 20px; }
+.card { border-radius: 4px; box-shadow: none; }
+.setup .cardHeading { background: #f6f8f6; }
+.cardHeading { min-height: 52px; padding: 12px 20px; }
+.card .MuiAccordion-root { border-top-color: #e7eae7; }
+.card .MuiAccordionSummary-root { min-height: 44px; }
+.card .MuiAccordionDetails-root { padding-bottom: 20px; }
+.MuiOutlinedInput-root { border-radius: 4px !important; }
+.MuiButton-root { border-radius: 4px !important; }
+.plotArea, .plan {
+  margin-inline: 0;
+  width: 100%;
+  border-inline: 0;
+  border-radius: 0;
+  background: #f3f6f5;
+}
+.plotArea svg, .plan { max-height: 360px; }
+.plotFoot { padding: 12px 20px; }
+.legend { font-family: inherit; }
+.metrics { padding: 4px 20px 20px; gap: 24px; }
+.metrics > div { border: 0; padding: 0; }
+.metrics strong { font-family: inherit; font-size: clamp(1.1rem, 1.7vw, 1.4rem); }
+dd, td { font-family: inherit; }
+label input, label textarea { border-radius: 4px; }
+@media (max-width: 660px) {
+  .workgrid { grid-template-columns: minmax(0, 1fr); }
+  .metrics { gap: 12px; }
+}
+
+
+/* Interaction and small-screen refinements */
+html { -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+.MuiInputBase-input { font-variant-numeric: tabular-nums; }
+.MuiButton-root, .MuiToggleButton-root { min-height: 40px; }
+.cardHeading .MuiToggleButton-root, .plotTools .MuiToggleButton-root { min-height: 40px; }
+.MuiButton-outlined, .MuiButton-text, .MuiToggleButton-root { background-color: #f3f5f3; }
+.MuiOutlinedInput-root { background-color: #fff; }
+.MuiButtonBase-root:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid #303b3a;
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .MuiButton-root, .MuiToggleButton-root {
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+}
+@media (max-width: 660px) {
+  .MuiInputBase-input, label input, label textarea { font-size: 16px; }
+  .three { grid-template-columns: 1fr; }
+  .plotTools { flex-wrap: wrap; }
+  .plotFoot { gap: 4px 16px; }
+}

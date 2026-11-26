@@ -25,7 +25,7 @@ import {
   type ClimateOptions,
 } from "../api/client";
 import { palette } from "../theme";
-import { Num, Select, Section } from "../components/Controls";
+import { Num, Select, Section, pavementCategories } from "../components/Controls";
 import { LayeredElastic } from "./LayeredElastic";
 
 const initial: Placement = {
@@ -122,15 +122,18 @@ export function Irc({
       .catch(e => { if (alive) setClimateError(e.message); });
     return () => { alive = false; };
   }, [zone, config.h, period, interpolate, mode]);
+  const needsAAOffsets = p.case === "AA_WHEELED" && !p.aa_wheel_offsets_y_mm?.every(Number.isFinite);
   useEffect(() => {
     let alive = true;
     if (!options.length || layered) return;
     setErr("");
     setPreview(null);
     setChecks([]);
+    if (needsAAOffsets) return;
+    const placement = p.case === "AA_WHEELED" ? p : { ...p, aa_wheel_offsets_y_mm: null };
     const timer = setTimeout(
       () =>
-        Promise.all([api.preview(p), api.check(p)])
+        Promise.all([api.preview(placement), api.check(placement)])
           .then(([r, c]) => {
             if (alive) {
               setPreview(r);
@@ -146,7 +149,7 @@ export function Irc({
       alive = false;
       clearTimeout(timer);
     };
-  }, [p, options, layered]);
+  }, [p, options, layered, needsAAOffsets]);
   const update = (v: Partial<Placement>) => {
     setPreview(null);
     setChecks([]);
@@ -261,10 +264,15 @@ export function Irc({
               />
             )}
             {p.case === "AA_WHEELED" && (
-              <label>Four verified AA wheel offsets (mm)
-                <input placeholder="e.g. -900, -300, 300, 900"
-                  onChange={(e) => update({ aa_wheel_offsets_y_mm: e.target.value.split(",").map(v => v.trim() ? Number(v) : NaN) })} />
-              </label>
+              <fieldset><legend>Verified AA wheel offsets (mm)</legend>
+                <p className="meta">Enter four signed transverse centres from left to right, relative to the vehicle origin. Use verified dimensions for your vehicle.</p>
+                <div className="two">{Array.from({ length: 4 }, (_, i) =>
+                  <Num key={i} label={`Wheel ${i + 1} (mm)`} value={p.aa_wheel_offsets_y_mm?.[i] ?? null}
+                    set={value => {
+                      const centres = Array.from({ length: 4 }, (_, j) => j === i ? value : p.aa_wheel_offsets_y_mm?.[j] ?? NaN);
+                      update({ aa_wheel_offsets_y_mm: centres });
+                    }} />)}</div>
+              </fieldset>
             )}
             <div className="two">
               {number("x_m", "Origin x (m)")}
@@ -294,7 +302,7 @@ export function Irc({
               {support === "effective" && <Num label="DLC thickness (mm)" value={thickness} set={setThickness} />}
             </> : <>
               <Select label="Catalogue category" value={category} set={setCategory}
-                items={["a", "b", "c", "d", "e", "f"].map(v => [v, v.toUpperCase()])} />
+                items={pavementCategories} />
               <Num label="Traffic (msa, exact catalogue value)" value={traffic} set={setTraffic} />
               <Num label="Trial bituminous modulus (MPa)" value={bitumen} set={setBitumen} />
               <Num label="Finite subgrade thickness (m)" value={subgrade} set={setSubgrade} />
@@ -320,7 +328,7 @@ export function Irc({
               <p className="meta">{climate?.zones.find(z => z.zone === zone)?.region}</p>
               <Select label="Design condition" value={period} set={setPeriod} items={[["day", "Day"], ["night", "Night"]]} />
               <Select label="Interpolate IRC tables" value={interpolate} set={setInterpolate} items={[["no", "Exact tabulated values"], ["yes", "Allow bounded interpolation"]]} />
-              <p className="meta">Slab thickness: {fmt(config.h * 1000)} mm, from Plate solver. Interpolation also applies to CBR and foundation lookups.</p>
+              <p className="meta">Slab thickness: {fmt(config.h * 1000)} mm, from Pavement layer solver. Interpolation also applies to CBR and foundation lookups.</p>
               {climateResult && <Alert severity="info">ΔT (top − bottom): {fmt(climateResult.delta_T_K)} K. {climateResult.notes.join(" ")}</Alert>}
               {climateError && <Alert severity="error">{climateError}</Alert>}
             </>}
@@ -431,7 +439,7 @@ export function Irc({
                   variant="contained"
                   onClick={() => apply(p, preview.vehicle_load, preview.notes)}
                 >
-                  Use in plate solver
+                  Use in pavement layer solver
                 </Button>
                 <p className="meta">
                   Transfers plate dimensions and footprints with distributed
@@ -441,7 +449,7 @@ export function Irc({
             </>
           ) : (
             <div className="empty">
-              {err ? "Preview unavailable" : <CircularProgress size={24} />}
+              {needsAAOffsets ? "Enter all four wheel offsets to preview the footprints." : err ? "Preview unavailable" : <CircularProgress size={24} />}
             </div>
           )}
         </div>

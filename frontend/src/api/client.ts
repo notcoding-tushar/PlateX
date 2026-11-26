@@ -1,4 +1,4 @@
-import { componentRequest } from "./streamlit";
+import { request } from "./request";
 export interface Patch {
   shape: "rectangle" | "circle";
   x_m: number;
@@ -204,29 +204,6 @@ export type Benchmark = {
   computed: Record<string, number>;
   reference: Record<string, number>;
 };
-async function request<T>(path: string, body?: unknown): Promise<T> {
-  if (import.meta.env.MODE === "streamlit") return componentRequest<T>(path, body);
-  const res = await fetch(
-    (import.meta.env.VITE_API_BASE_URL ?? "") + "/api/" + path,
-    body === undefined
-      ? {}
-      : {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-  );
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    const d = data.detail;
-    throw new Error(
-      Array.isArray(d)
-        ? d.map((x) => x.loc.slice(1).join(".") + " " + x.msg).join("; ")
-        : d || "Request failed (" + res.status + ")",
-    );
-  }
-  return res.json();
-}
 export const api = {
   h2Refinement: () => request<H2Refinement>("validation/h2-refinement"),
   catalogue: () => request<{categories: string[]; cbr: number[]; traffic_msa: number[]}>("irc/flexible/catalogue-options"),

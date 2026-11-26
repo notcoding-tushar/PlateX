@@ -6,9 +6,9 @@ export const palette = {
   slate: "#555b5d",
   sand: "#e9d5b2",
   mint: "#eee9e1",
-  canvas: "#f2f2f0",
+  canvas: "#eef1ef",
   surface: "#ffffff",
-  drawing: "#f7f7f5",
+  drawing: "#f3f6f5",
   ink: "#22292c",
 };
 
@@ -24,7 +24,7 @@ export default createTheme({
     info: { main: "#3f6478" },
     divider: "#dddedb",
   },
-  shape: { borderRadius: 8 },
+  shape: { borderRadius: 4 },
   typography: {
     fontFamily: '"Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
     button: { textTransform: "none", fontWeight: 500 },

@@ -435,6 +435,7 @@ class LayeredElasticRequest(BaseModel):
     cbr: float = Field(gt=0)
     traffic_msa: float = Field(gt=0)
     bituminous_E_MPa: float = Field(gt=0)
+    layers: list[ElasticLayer] | None = Field(default=None, min_length=1, max_length=20)
     wheels: Literal["single", "dual"] = "dual"
     ctb_fatigue: bool = False
     wheel_force_N: float | None = Field(default=None, gt=0)

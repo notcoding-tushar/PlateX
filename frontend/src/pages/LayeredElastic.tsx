@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Checkbox, FormControlLabel } from "@mui/material";
 import { api, fmt, type DepthPoint, type ElasticResponse, type ElasticResult } from "../api/client";
-import { Num, Section, Select } from "../components/Controls";
+import { Num, Section, Select, pavementCategories } from "../components/Controls";
 
 function PointDetails({ row }: { row: ElasticResponse }) {
   const quantities: [string, number, string][] = [
@@ -27,6 +27,13 @@ export function LayeredElastic() {
   const [options, setOptions] = useState<Awaited<ReturnType<typeof api.catalogue>>>();
   const [category, setCategory] = useState("a"), [cbr, setCbr] = useState("5"),
     [traffic, setTraffic] = useState("10"), [modulus, setModulus] = useState(2000);
+  const [graphQuantity, setGraphQuantity] = useState("eps_z");
+  const [custom, setCustom] = useState(false);
+  const [layers, setLayers] = useState([
+    {name: "Surface", thickness_m: 0.1 as number | null, E_Pa: 2e9, nu: 0.3},
+    {name: "Base", thickness_m: 0.3 as number | null, E_Pa: 2e8, nu: 0.3},
+    {name: "Subgrade", thickness_m: null as number | null, E_Pa: 75e6, nu: 0.3},
+  ]);
   const [wheels, setWheels] = useState("dual"), [load, setLoad] = useState("normal");
   const [force, setForce] = useState<number | null>(null), [pressure, setPressure] = useState<number | null>(null),
     [spacing, setSpacing] = useState<number | null>(null);
@@ -41,7 +48,7 @@ export function LayeredElastic() {
     return () => { active = false; };
   }, [retry]);
   const body = { category, cbr: Number(cbr), traffic_msa: Number(traffic), bituminous_E_MPa: modulus,
-    wheels, ctb_fatigue: load === "ctb", points: probe ? [point] : [],
+    layers: custom ? layers : undefined, wheels, ctb_fatigue: load === "ctb", points: probe ? [point] : [],
     wheel_force_N: force == null ? undefined : force*1000,
     pressure_Pa: pressure == null ? undefined : pressure*1e6,
     spacing_m: wheels === "dual" && spacing != null ? spacing : undefined };
@@ -55,19 +62,44 @@ export function LayeredElastic() {
   return <div className="workgrid">
     <aside className="card">
       <div className="cardHeading"><h2>Trial pavement section</h2></div>
-      <Section title="Catalogue & loading" open>
+      <Section title="IRC catalogue trial" open>
+        {!custom && <>
         {options && <>
-          <Select label="Catalogue category" value={category} set={setCategory} items={menu(options.categories)} />
+          <Select label="Catalogue category" value={category} set={setCategory} items={pavementCategories.filter(([id]) => options.categories.includes(id))} />
           <div className="two">
             <Select label="CBR (%)" value={cbr} set={setCbr} items={menu(options.cbr)} />
             <Select label="Traffic (MSA)" value={traffic} set={setTraffic} items={menu(options.traffic_msa)} />
           </div>
         </>}
         <Num label="Bottom DBM modulus (MPa)" value={modulus} set={setModulus} min={0} />
+        <p className="meta">CTB = cement-treated base, CTSB = cement-treated sub-base, SAMI = stress-absorbing membrane interlayer, RAP = reclaimed asphalt pavement. Each section also includes subgrade.</p>
+        </>}
+      </Section>
+      <Section title="Wheel loading" open>
         <Select label="Wheel arrangement" value={wheels} set={setWheels}
           items={[["dual", "Standard dual pair"], ["single", "Single wheel"]]} />
         <Select label="Contact pressure case" value={load} set={setLoad}
           items={[["normal", "Standard"], ["ctb", "CTB fatigue"]]} />
+      </Section>
+      <Section title="Pavement layers" open>
+        <Select label="Layer configuration" value={custom ? "custom" : "catalogue"} set={v => setCustom(v === "custom")}
+          items={[["catalogue", "IRC catalogue"], ["custom", "Custom layers"]]} />
+        {custom && <>
+          <Select label="Number of layers" value={String(layers.length)} items={menu(Array.from({length: 10}, (_, i) => i + 1))}
+            set={v => { const count = Number(v); const finite = layers.slice(0, -1);
+              while (finite.length < count - 1) finite.push({name: `Layer ${finite.length + 1}`, thickness_m: 0.1, E_Pa: 200e6, nu: 0.3});
+              setLayers([...finite.slice(0, count - 1), layers[layers.length - 1]]); }} />
+          <p className="meta">Layers are ordered from surface to subgrade. The final layer is a half-space.</p>
+          {layers.map((layer, i) => <div className="patchForm" key={i}>
+            <strong>Layer {i+1}{i === layers.length-1 ? " · half-space" : ""}</strong>
+            {i < layers.length-1 && <Num label="Thickness (m)" value={layer.thickness_m} min={0}
+              set={v => setLayers(layers.map((l,j) => j === i ? {...l, thickness_m:v} : l))} />}
+            <Num label="Elastic modulus (MPa)" value={layer.E_Pa/1e6} min={0}
+              set={v => setLayers(layers.map((l,j) => j === i ? {...l, E_Pa:v*1e6} : l))} />
+            <Num label="Poisson ratio" value={layer.nu}
+              set={v => setLayers(layers.map((l,j) => j === i ? {...l, nu:v} : l))} />
+          </div>)}
+        </>}
       </Section>
       <Section title="Wheel load overrides">
         <p className="meta">Leave a field blank to use the selected IRC load case.</p>
@@ -109,6 +141,31 @@ export function LayeredElastic() {
                 {row.layer === "CTB" && <span>{fmt(row.max_horizontal_stress_Pa/1000)} kPa</span>}</td>
             </tr>)}</tbody></table>
         </div>
+        <Section title="Response by pavement layer" open>
+          <Select label="Response quantity" value={graphQuantity} set={setGraphQuantity}
+            items={[["eps_z", "Vertical strain (µε)"], ["max_horizontal_strain", "Maximum horizontal strain (µε)"],
+              ["sigma_z_Pa", "Vertical stress (kPa)"], ["w_m", "Deflection (mm)"]]} />
+          <p className="meta">Values are calculated at the listed interface sampling points. Wheel centre and pair midpoint are shown separately.</p>
+          {result.critical.length ? <div style={{overflowX:"auto"}}>
+            <svg role="img" aria-label="Calculated response at layer interfaces" viewBox={`0 0 700 ${Math.max(150, result.critical.length * 48 + 50)}`} style={{width:"100%", minWidth:500}}>
+              {(() => {
+                const factor = graphQuantity === "w_m" ? 1000 : graphQuantity === "sigma_z_Pa" ? 0.001 : 1e6;
+                const values = result.critical.map(row => row[graphQuantity as keyof ElasticResponse] as number * factor);
+                const max = Math.max(...values.map(Math.abs), 1e-12);
+                return result.critical.map((row, i) => {
+                  const value = values[i], y = 30 + i * 48, length = Math.abs(value) / max * 150;
+                  return <g key={i} fontSize="12" fill="#243c49">
+                    <text x="0" y={y}>{row.layer} · {row.label?.split(" · ")[0]}</text>
+                    <text x="0" y={y+16}>{fmt(row.depth_m*1000)} mm · {row.side}</text>
+                    <line x1="390" x2="390" y1={y-15} y2={y+20} stroke="#71858a" />
+                    <rect x={value < 0 ? 390-length : 390} y={y-12} width={length} height="18" fill="#487e9a" />
+                    <text x={value < 0 ? 385-length : 395+length} y={y+1} textAnchor={value < 0 ? "end" : "start"}>{fmt(value)}</text>
+                  </g>;
+                });
+              })()}
+            </svg>
+          </div> : <p>No interface sampling points are available for this section.</p>}
+        </Section>
         <Section title="Point stresses, strains & displacement">
           {[...result.points, ...result.critical].map((row, i) => <PointDetails key={i} row={row} />)}
         </Section>

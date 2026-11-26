@@ -1,4 +1,4 @@
-# PlateX web workbench
+# PlateX pavement analysis workbench
 
 On a fresh checkout, install the dependencies from the repository root. Use Python 3.10+ and a Node.js version supported by Vite 7 (20.19+ or 22.12+).
 
@@ -45,8 +45,10 @@ Use **Stack checks & source notes** for the underlying trial-section provisions.
 
 Choose **HOSNT12 Q8 finite plate** for a finite section with edge supports.
 Place the contacts and open **Pavement analysis model** to prepare a plate with
-an explicit subgrade thickness. On the Plate Solver, **Pavement layers** shows
-the stack from `-h/2` to `+h/2`. Drag the surface to rotate, or select **Pan**
+an explicit subgrade thickness. On the Pavement Layer Solver, **Pavement layers** shows
+the stack from `-h/2` to `+h/2`. Choose **Custom pavement stack** to start from the current isotropic properties. Set the number of layers, then edit each thickness and material from bottom to top. The section thickness updates automatically. Under **IRC Bridge**, Class AA wheeled requires four verified signed wheel-centre offsets in millimetres, entered from left to right.
+
+Drag the surface to rotate, or select **Pan**
 to reposition the plot. Contour view supports panning. With the plot focused,
 arrow keys move the view, Shift+arrows pan and Home restores the initial view.
 
@@ -60,4 +62,4 @@ In IITPAVE, choose a new pavement section or an existing input file. Enter the l
 
 For prerequisites only, run `& '.\Run IITPAVE.cmd' --check`. The executable and its results are a separate legacy tool; see [IITPAVE comparison report](../IITPAVE%20comparison%20report.md) for model differences and the interface-response concern observed in one test.
 
-For rigid pavements, **Climatic variation** shows the IRC:58-2015 Table 1 region descriptions, including state, hill and coastal qualifications. Enter the site and choose the applicable zone; the software does not infer a zone from a state name. Choose day or night and, if desired, bounded interpolation. Table values are maximum top-to-bottom differences, not an absolute temperature or a time-series weather forecast. The supplied linear through-depth profile approximates a daytime distribution which is nonlinear; permanent curl is not included. Use site-specific data where available. For a project-defined temperature profile, use **Thermal & moisture** on the Plate Solver, where the coefficients and in-plane distribution are explicit. The IRC differential is not automatically applied across an explicit multilayer stack.
+For rigid pavements, **Climatic variation** shows the IRC:58-2015 Table 1 region descriptions, including state, hill and coastal qualifications. Enter the site and choose the applicable zone; the software does not infer a zone from a state name. Choose day or night and, if desired, bounded interpolation. Table values are maximum top-to-bottom differences, not an absolute temperature or a time-series weather forecast. The supplied linear through-depth profile approximates a daytime distribution which is nonlinear; permanent curl is not included. Use site-specific data where available. For a project-defined temperature profile, use **Thermal & moisture** on the Pavement Layer Solver, where the coefficients and in-plane distribution are explicit. The IRC differential is not automatically applied across an explicit multilayer stack.

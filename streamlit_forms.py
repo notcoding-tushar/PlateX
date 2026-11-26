@@ -94,9 +94,9 @@ def layered_results(result):
 
 def render_forms():
     st.title("PlateX")
-    page = st.sidebar.radio("Analysis", ["HOSNT12 plate", "IRC:37 layered elastic"])
-    if page == "HOSNT12 plate":
-        st.subheader("HOSNT12 Q8 finite plate")
+    page = st.sidebar.radio("Analysis", ["Pavement layers (HOSNT12)", "IRC:37 layered elastic"])
+    if page == "Pavement layers (HOSNT12)":
+        st.subheader("Pavement layer solver · HOSNT12 Q8")
         st.info("Plane-stress plate: σz and thickness stretching are constrained. A finite plate is not a layered-elastic half-space. Check mesh and boundary sensitivity.")
         st.caption("Example values are editable, not material recommendations. Isotropic E and ν must be supplied.")
         with st.form("plate"):
@@ -148,7 +148,7 @@ def render_forms():
                 override = st.checkbox("Use Advanced JSON instead of structured plate inputs")
                 raw = st.text_area("Complete AnalysisConfig JSON", value="{}", height=180)
                 st.caption("JSON replaces all structured inputs for this solve; use it for nodal loads, multiple patches, query points and other schema options.")
-            submit = st.form_submit_button("Solve plate", type="primary")
+            submit = st.form_submit_button("Solve pavement section", type="primary")
         if submit:
             try:
                 if override:
@@ -167,7 +167,7 @@ def render_forms():
                         patch.update({"radius_m": radius} if patch_shape == "circle" else {"length_m": length, "width_m": width})
                         data["vehicle_load"] = {"patches": [patch]}
                     config = AnalysisConfig.model_validate(data)
-                with st.spinner("Solving plate…"):
+                with st.spinner("Solving pavement section…"):
                     st.session_state["plate_result"] = solve_hosnt12(config, include_field=True)
             except (ValueError, ArithmeticError, RuntimeError) as exc:
                 st.error(str(exc))

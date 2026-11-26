@@ -31,6 +31,18 @@ def test_live_benchmark(thermal, reference):
     assert report["computed"]["w_bar"] == pytest.approx(reference, rel=1e-3)
 
 
+
+def test_validation_suite_returns_comparisons():
+    response = client.post("/api/validation/suite", json={"tolerance_pct": 2})
+    assert response.status_code == 200
+    report = response.json()
+    assert len(report["comparisons"]) == 32
+    assert set(report["passed_cases"] + report["failed_cases"]) == {
+        "M1", "M2", "M3", "M4", "H1", "H2", "H3", "H4"
+    }
+    assert "H2" in report["failed_cases"]
+
+
 def test_sweep_and_errors():
     patch = client.post("/api/irc/preview-loads", json={**PLACEMENT, "x_m": 0.4}).json()["vehicle_load"]
     cases = [patch, {**BASE, "q0": 0}]

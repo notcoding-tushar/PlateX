@@ -305,6 +305,12 @@ def solve_flexible_layered(req: LayeredElasticRequest) -> LayeredElasticResult:
         si = row.to_SI()
         layers.append(ElasticLayer(name=row.name, thickness_m=si["thickness_m"],
                                    E_Pa=si["material"]["E_Pa"], nu=si["material"]["nu"]))
+    if req.layers is not None:
+        layers = req.layers
+        if layers[-1].thickness_m is not None or any(layer.thickness_m is None for layer in layers[:-1]):
+            raise ValueError("Only the final layer must be a half-space.")
+        checks = []
+        profile = {"description": "User-defined bonded layer stack"}
     standard = irc.flexible_standard_patches(ctb_fatigue=req.ctb_fatigue)
     ref = standard[0].to_SI()
     notes = ["Depth and displacement are positive down. Tensile stress and strain are positive.",
@@ -326,15 +332,19 @@ def solve_flexible_layered(req: LayeredElasticRequest) -> LayeredElasticResult:
     positions = [("Wheel centre", offsets[-1])]
     if req.wheels == "dual":
         positions.append(("Pair midpoint", 0.))
-    for loc in irc.critical_locations(stack):
+    locations = irc.critical_locations(stack) if req.layers is None else [
+        {"response": layer.name, "depth_mm": sum(item.thickness_m for item in layers[:i+1]) * 1000, "side": "above"}
+        for i, layer in enumerate(layers[:-1])
+    ]
+    for loc in locations:
         for name, y in positions:
             targets.append(DepthPoint(label=f"{name} · {loc['response']}", x_m=0, y_m=y,
                                       depth_m=loc["depth_mm"]/1000,
                                       side="below" if loc["side"] == "just_inside_subgrade" else "above"))
     responses = solve_layered_elastic(layers, wheels, targets + req.points)
-    if layers[0].E_Pa < req.bituminous_E_MPa*1e6:
+    if req.layers is None and layers[0].E_Pa < req.bituminous_E_MPa*1e6:
         notes.append(f"Catalogue cap applied. Effective bituminous modulus is {layers[0].E_Pa/1e6:g} MPa.")
-    sources = list(dict.fromkeys([profile.pop("source"), irc.get("37.standard_load").source,
+    sources = list(dict.fromkeys([profile.pop("source", irc.get("37.analysis").source), irc.get("37.standard_load").source,
                                   irc.get("37.catalogue_scope").source,
                                   irc.get("37.analysis").source, *(row.material.source for row in stack),
                                   *(check.source for check in checks)]))

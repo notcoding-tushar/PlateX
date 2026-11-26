@@ -145,3 +145,49 @@ The validation tolerance default was subsequently changed to 2% at the user's re
 Matrix & Validation now runs an optional H2 study with the same top-centre sampling point and Table 3 inputs on 10 × 10, 14 × 14 and 20 × 20 meshes. Direct normalized axial stresses were −0.022337016, −0.024775616 and −0.026061202. The stress differences from the published −0.02740 decreased from 18.478% to 9.578% to 4.886%. The observed order of 2.02 gives a Richardson estimate of −0.027277305 (0.448% difference). The paper value is used only for comparison. The original suite still scores its 32 direct 10 × 10 results.
 
 The thermal strain term nearly cancels the total-strain contribution to the top-face stress. At 10 × 10 the normalized centre deflection was 0.97211727 versus 0.97216 in Table 3. All 72 regression tests and 44 CLI self-checks passed, as did the IRC self-test, Ruff and the Streamlit frontend build. The Table 3 pressure remains a replication assumption.
+
+## 2026-11-27 — Pavement layer workbench
+
+- Promoted single-layer, custom bonded stack and benchmark laminate configurations to the main pavement setup. The layer count selector splits the top material or extends the highest retained material. Editing individual thicknesses rebuilds contiguous interfaces about the mid-plane. Changing stack geometry clears imported evaluation points tied to the previous section.
+- Named all six finite-section boundary conditions by edge support while retaining the existing solver IDs. Updated navigation, Streamlit titles and project documentation to describe pavement analysis.
+- Replaced the comma-separated Class AA input with four signed transverse centre fields in millimetres. The bridge preview waits for four entries and uses the existing IRC geometry validation.
+- Verified both production builds and the bundled Streamlit entry point. Headless Edge completed a three-layer finite-section solve after a thickness edit and an AA preview with eight contact patches. All 72 pytest tests, 44 CLI self-tests, IRC library self-tests and backend Ruff checks passed. The 10 × 10 paper comparison completed and retained the known 18.478% axial-stress discrepancy in the hygrothermal foundation case.
+- Custom finite pavement stacks use the HOSNT12 model. The separate IRC:37 semi-infinite layered-elastic workflow uses catalogue sections.
+
+
+## 2026-11-27 — Custom IRC:37 layers and accuracy benchmark
+
+- Added a custom layered-elastic stack with editable count, thickness, modulus and Poisson ratio, ending in a half-space. Default values describe a runnable three-layer section.
+- Added an IITPAVE comparison report using the existing recorded three-layer benchmark and current calculated results. The five differences range from 0.105% to 0.156%.
+- Catalogue-based analyses remain available. Custom sections use interface response sampling and do not receive IRC catalogue compliance checks. The benchmark covers one case and the previously documented seven-layer IITPAVE discrepancy remains unresolved.
+
+## 2026-11-27 — Layer response graphs and clearer trial inputs
+
+- Added graphs for vertical and horizontal strain, vertical stress and displacement at the actual layered-elastic interface sampling locations, distinguishing wheel centre and pair midpoint.
+- Expanded all IRC:37 category choices with their top-down layer arrangements. Separated catalogue trial inputs from the custom layer configuration and wheel loading controls, preserving their independent values.
+- Simplified the thermal inputs to mean temperature change and top-to-bottom difference, with the full thermal and moisture profiles available under Advanced.
+- Streamlit frontend build passed. The graphs display sampled interface responses rather than a continuous depth profile; the final half-space has no finite bottom interface.
+
+
+## 2026-11-27 — Workbench structure and validation reliability
+
+- Extracted pavement analysis state and request lifecycle into a dedicated React hook, extracted the shared request transport, and split validation endpoints into their own router while retaining public paths.
+- Added environment settings for the API proxy and CORS origins, and documented the feature, transport, state and backend boundaries.
+- The Streamlit bridge now uses browser-independent request identifiers, reports unexpected server errors, and times out stalled requests. Matrix diagnostics identify when they belong to an earlier solve.
+- Standalone and Streamlit builds passed. All 72 pytest cases, 44 CLI self-checks, the IRC self-test, backend Ruff, and the CLI paper comparison completed. The validation suite endpoint returned all 32 comparisons with H2 outside tolerance. The Windows sandbox blocked the local socket used by the standalone API probe, so it was verified outside the sandbox. Benchmark comparisons retain the documented Table 3 load convention and numerical discrepancy.
+
+## 2026-11-27 — Streamlit validation route refresh
+
+- Reproduced "Not Found" when running the validation suite on the existing Streamlit server. Its long-running Python process held the older API route table and schemas.
+- Restarted the local Streamlit server to load the current modules. In the browser, matrix diagnostics appeared and the eight-case suite returned all 32 comparisons. Seven cases passed at 2% tolerance and H2 retained its known 18.478% axial-stress difference.
+
+## 2026-11-27 — Workbench visual refinement
+
+- Applied a quieter pavement-analysis interface with compact rectangular controls, reduced card decoration, consistent numerical typography, and a wider edge-to-edge deflection plot. Retained the existing copper accent and analysis controls.
+- Removed the redundant solver subtitle and rebuilt the shared Streamlit bundle. Verified the live Streamlit solver view and Matrix & Validation navigation. The Streamlit production build passed.
+
+## 2026-11-27 — Workbench interaction polish
+
+- Improved toggle and button target sizes, focus indicators, numeric alignment and mobile input sizing. Kept the plot responsive and exposed initial loading and analysis errors to assistive technology.
+- Rebuilt the Streamlit bundle and visually checked the live desktop solver after the update. The production frontend build passed.
+- Mobile rendering, keyboard interaction and frame-by-frame motion were not independently verified in this pass.

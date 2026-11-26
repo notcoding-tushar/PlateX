@@ -4,15 +4,21 @@ const send = (type: string, fields: Record<string, unknown>) =>
   window.parent.postMessage({ isStreamlitMessage: true, type, ...fields }, "*");
 
 let tail = Promise.resolve();
+let nextId = 0;
 let receive: ((reply: Reply) => void) | undefined;
 type Reply = { id: string; result?: unknown; error?: string };
 
 export function componentRequest<T>(path: string, body?: unknown): Promise<T> {
   const pending = tail.then(() => new Promise<T>((resolve, reject) => {
-    const id = crypto.randomUUID();
+    const id = `${Date.now()}-${++nextId}`;
+    const timeout = window.setTimeout(() => {
+      receive = undefined;
+      reject(new Error("The analysis did not respond within five minutes. Please retry."));
+    }, 300_000);
     receive = reply => {
       if (reply.id !== id) return;
       receive = undefined;
+      window.clearTimeout(timeout);
       if (reply.error) reject(new Error(reply.error));
       else resolve(reply.result as T);
     };

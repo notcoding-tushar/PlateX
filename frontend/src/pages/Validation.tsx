@@ -60,7 +60,7 @@ function H2StressStudy() {
   </section>;
 }
 
-export function Validation({ result }: { result: Result | null }) {
+export function Validation({ result, stale }: { result: Result | null; stale: boolean }) {
   const [tolerance, setTolerance] = useState(2),
     [bench, setBench] = useState<PaperReport | null>(null),
     [busy, setBusy] = useState(false),
@@ -87,6 +87,7 @@ export function Validation({ result }: { result: Result | null }) {
       <div className="workgrid validationGrid">
         <section className="card inner">
           <h2>Stiffness matrix</h2>
+          {stale && <Alert severity="info">Inputs changed. Matrix diagnostics reflect the last completed analysis.</Alert>}
           {result ? (
             <>
               <p>
@@ -122,7 +123,7 @@ export function Validation({ result }: { result: Result | null }) {
               ))}
             </>
           ) : (
-            <p>Run a plate analysis to inspect the matrix.</p>
+            <p>Run a pavement analysis to inspect the matrix.</p>
           )}
         </section>
         <section className="card inner">

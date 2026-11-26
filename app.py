@@ -1,6 +1,7 @@
 """Launch the shared PlateX workbench inside Streamlit."""
 import asyncio
 import hashlib
+import logging
 import sys
 from pathlib import Path
 
@@ -12,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "backend"))
 from api.main import app as analysis_api  # noqa: E402
 
-st.set_page_config(page_title="PlateX · Analysis workbench", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="PlateX · Pavement analysis workbench", layout="wide", initial_sidebar_state="collapsed")
 view = st.sidebar.radio("Interface", ["Analysis workbench", "Structured forms"])
 if view == "Structured forms":
     from streamlit_forms import render_forms
@@ -61,7 +62,12 @@ message = workbench(reply=reply, key="workbench")
 if message and message["id"] != reply.get("id"):
     try:
         reply = {"id": message["id"], "result": asyncio.run(dispatch(message))}
-    except (ValueError, RuntimeError, ArithmeticError, KeyError) as exc:
-        reply = {"id": message["id"], "error": str(exc)}
+    except Exception as exc:
+        logging.exception("Workbench request failed")
+        if isinstance(exc, (ValueError, RuntimeError, ArithmeticError, KeyError)):
+            error = str(exc)
+        else:
+            error = "The analysis failed unexpectedly. Check the server logs and retry."
+        reply = {"id": message["id"], "error": error}
     st.session_state.workbench_reply = reply
     st.rerun()

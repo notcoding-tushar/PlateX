@@ -90,3 +90,12 @@ export function download(name: string, contents: string, type: string) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export const pavementCategories: [string, string][] = [
+  ["a", "A · Bituminous, granular base, granular sub-base"],
+  ["b", "B · Bituminous, granular crack relief, CTB, CTSB"],
+  ["c", "C · Bituminous, SAMI, CTB, CTSB"],
+  ["d", "D · Bituminous, stabilised RAP, CTSB"],
+  ["e", "E · Bituminous, granular crack relief, CTB, granular sub-base"],
+  ["f", "F · Bituminous, granular base, CTSB"],
+];

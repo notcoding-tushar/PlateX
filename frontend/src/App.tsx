@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   AppBar,
@@ -13,71 +13,25 @@ import Layers from "@mui/icons-material/Layers";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import DownloadOutlined from "@mui/icons-material/DownloadOutlined";
 import {
-  api,
-  initial,
   fmt,
   metrics,
-  type Config,
   type Metric,
-  type Result,
 } from "./api/client";
 import { Plot } from "./components/Plot";
 import { Setup } from "./components/Setup";
 import { Section, Select, download } from "./components/Controls";
 import { Irc } from "./pages/Irc";
 import { Validation } from "./pages/Validation";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { usePavementAnalysis } from "./state/usePavementAnalysis";
 
 const keys = Object.keys(metrics) as Metric[];
 export default function App() {
   const [tab, setTab] = useState(0),
     [visited, setVisited] = useState(false),
     [drawer, setDrawer] = useState(false);
-  const [c, set] = useState<Config>(initial),
-    [results, setResults] = useState<Result[]>([]),
-    [index, select] = useState(0),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [surface, setSurface] = useState(true),
-    [count, setCount] = useState(1),
-    [travel, setTravel] = useState(0.3),
-    [snapshot, setSnapshot] = useState(""),
-    [notes, setNotes] = useState<string[]>([]);
-  const r = results[index],
-    positions = c.vehicle_load.patches.length ? count : 1;
-  const signature = JSON.stringify([c, positions, positions > 1 ? travel : 0]);
-  const dirty = Boolean(r) && snapshot !== signature;
-  const run = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      if (!Number.isInteger(positions) || positions < 1)
-        throw new Error("Sweep positions must be a positive integer.");
-      if (positions > 1 && !Number.isFinite(travel))
-        throw new Error("Enter total travel in metres.");
-      const loaded =
-        positions === 1
-          ? [await api.solve(c)]
-          : await api.sweep(
-              c,
-              Array.from({ length: positions }, (_, i) => ({
-                patches: c.vehicle_load.patches.map((p) => ({
-                  ...p,
-                  x_m: p.x_m + (travel * i) / (positions - 1),
-                })),
-              })),
-            );
-      setResults(loaded);
-      select(0);
-      setSnapshot(signature);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  useEffect(() => {
-    void run();
-  }, []);
+  const { c, set, results, index, select, busy, error, surface, setSurface, count,
+    setCount, travel, setTravel, notes, setNotes, r, positions, dirty, run } = usePavementAnalysis();
   const csv = () => {
     if (!r) return;
     const rows = [
@@ -138,7 +92,7 @@ export default function App() {
             aria-label="Workbench navigation"
           >
             {[
-              "Plate Solver",
+              "Pavement Layer Solver",
               "IRC Pavement & Bridge",
               "Matrix & Validation",
             ].map((n) => (
@@ -153,8 +107,7 @@ export default function App() {
           <>
             <div className="pageHead">
               <div>
-                <h1>Plate solver</h1>
-                <p>Finite element analysis of plate deflection and stress</p>
+                <h1>Pavement layer solver</h1>
               </div>
               <Button
                 variant="contained"
@@ -170,7 +123,7 @@ export default function App() {
                     : "Run analysis"}
               </Button>
             </div>
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && <Alert severity="error" role="alert">{error}</Alert>}
             {notes.map((n) => (
               <Alert key={n} severity="info">
                 {n}
@@ -205,7 +158,7 @@ export default function App() {
                   {r ? (
                     <Plot field={r.field} surface={surface} />
                   ) : (
-                    <div className="empty">
+                    <div className="empty" role="status">
                       {busy
                         ? "Computing nodal displacements…"
                         : "Run an analysis to plot deflection."}
@@ -313,7 +266,7 @@ export default function App() {
             />
           </div>
         )}
-        {tab === 2 && <Validation result={r ?? null} />}
+        {tab === 2 && <ErrorBoundary><Validation result={r ?? null} stale={dirty} /></ErrorBoundary>}
       </main>
     </>
   );

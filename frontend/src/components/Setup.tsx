@@ -1,4 +1,5 @@
-import { Alert, Button } from "@mui/material";
+import { useRef } from "react";
+import { Button } from "@mui/material";
 import type { Config, Layer, Patch } from "../api/client";
 import { Section, Select, Num } from "./Controls";
 
@@ -22,6 +23,28 @@ export function Setup({
     key: "a" | "b" | "h" | "m" | "n" | "nu" | "q0" | "alpha" | "beta",
     label: string,
   ) => <Num label={label} value={c[key]} set={(v) => update({ [key]: v })} />;
+  const layers = c.material_mode === "laminate" ? c.layers : null;
+  const custom = Boolean(layers?.length);
+  const previousStack = useRef<Pick<Config, "h" | "layers" | "query_points"> | null>(null);
+  const setThicknesses = (stack: Layer[], thicknesses: number[]) => {
+    const h = thicknesses.reduce((sum, value) => sum + value, 0);
+    let z = -h / 2;
+    update({ h, query_points: [], layers: stack.map((layer, i) => {
+      const bottom = z;
+      z += thicknesses[i];
+      return { ...layer, h_bottom: bottom, h_top: z };
+    }) });
+  };
+  const resizeStack = (count: number) => {
+    if (!layers?.length) return;
+    const kept = layers.slice(0, count);
+    const last = kept[kept.length - 1];
+    const bottom = last.h_bottom;
+    const pieces = count - kept.length + 1;
+    const step = (c.h / 2 - bottom) / pieces;
+    update({ query_points: [], layers: [...kept.slice(0, -1), ...Array.from({length: pieces}, (_, i) =>
+      ({ ...last, h_bottom: bottom + i * step, h_top: bottom + (i + 1) * step }))] });
+  };
   const patches = c.vehicle_load.patches;
   const setPatches = (list: Patch[]) =>
     update({ vehicle_load: { patches: list } });
@@ -44,27 +67,36 @@ export function Setup({
       <div className="cardHeading">
         <h2>Model setup</h2>
       </div>
-      <Section title="Plate geometry" open>
+      <Section title="Pavement geometry" open>
         <div className="two">
           {num("a", "Length a (m)")}
           {num("b", "Width b (m)")}
         </div>
-        {num("h", "Thickness h (m)")}
+        {custom ? <p>Total layer thickness · {Number(c.h.toPrecision(8))} m</p> : num("h", "Section thickness (m)")}
         <div className="two">
           {num("m", "Elements · x")}
           {num("n", "Elements · y")}
         </div>
       </Section>
-      <Section title="Material & supports">
-        <Select
-          label="Material"
-          value={c.material_mode}
-          set={(v) => update({ material_mode: v as Config["material_mode"] })}
-          items={[
-            ["isotropic", "Isotropic"],
-            ["laminate", "Preset [0/90/0] laminate"],
-          ]}
-        />
+      <Section title="Pavement layers" open>
+        <Select label="Layer configuration" value={custom ? "custom" : c.material_mode}
+          items={[["isotropic", "Single isotropic layer"], ["custom", "Custom pavement stack"],
+            ["laminate", "Benchmark laminate [0/90/0]"]]}
+          set={mode => {
+            if (mode !== "custom") {
+              if (custom) previousStack.current = { h: c.h, layers, query_points: c.query_points };
+              update({ material_mode: mode as Config["material_mode"], layers: null, query_points: [] });
+              return;
+            }
+            if (previousStack.current) {
+              update({ material_mode: "laminate", ...previousStack.current });
+              return;
+            }
+            const E = c.E ?? NaN, nu = c.nu ?? NaN, G = E / (2 * (1 + nu));
+            update({ material_mode: "laminate", layers: [{ h_bottom: -c.h/2, h_top: c.h/2,
+              E1:E, E2:E, E3:E, nu12:nu, nu23:nu, nu13:nu, G12:G, G13:G, G23:G,
+              theta_rad:0, alpha1:c.alpha, alpha2:c.alpha, alpha3:0, beta1:c.beta, beta2:c.beta, beta3:0 }] });
+          }} />
         {c.material_mode === "isotropic" && (
           <div className="two">
             <Num
@@ -75,42 +107,53 @@ export function Setup({
             {num("nu", "Poisson ratio ν")}
           </div>
         )}
-        <Select
-          label="Boundary conditions"
-          value={String(c.choicebc)}
-          set={(v) => update({ choicebc: Number(v) })}
-          items={["SSSS", "CCCC", "SFSF", "FSFS", "SCSC", "CSCS"].map(
-            (s, i) => [String(i + 1), s],
-          )}
-        />
-      </Section>
-      {c.material_mode === "laminate" && <Section title="Pavement layers" open>
-        <p className="meta">Layers use z coordinates in metres from the plate mid-plane. They must form a continuous stack from −h/2 to +h/2. Interfaces are bonded.</p>
-        {!c.layers?.length ? <Alert severity="info">The [0/90/0] benchmark preset is active. Prepare an IRC flexible model to inspect its pavement stack, or create a layer from the isotropic material values.</Alert> :
-          c.layers.map((layer, i) => {
+        {custom && layers && <>
+          <Select label="Number of layers" value={String(layers.length)} set={v => resizeStack(Number(v))}
+            items={Array.from({length: Math.max(10, layers.length + 1)}, (_, i) => [String(i+1), String(i+1)])} />
+          {!!c.query_points?.length && <p className="meta">Changing the stack geometry clears the imported section’s evaluation points.</p>}
+          <p className="meta">Layers run from bottom to top. Increasing the count divides the top layer. Reducing it extends the highest retained material to the surface.</p>
+          {layers.map((layer, i) => {
             const field = (key: keyof Layer, label: string, scale = 1) => <Num label={label}
               value={layer[key] / scale} set={v => update({ layers: c.layers!.map((old, j) => j === i ? { ...old, [key]: v * scale } : old) })} />;
             return <div className="patchForm" key={i}>
               <strong>Layer {i + 1} · bottom to top</strong>
-              <div className="two">{field("h_bottom", "Bottom z (m)")}{field("h_top", "Top z (m)")}</div>
+              <label>Thickness (m)
+                <input type="number" step="any" min="0" required
+                  key={String(layer.h_top-layer.h_bottom)}
+                  defaultValue={Number((layer.h_top-layer.h_bottom).toPrecision(12))}
+                  onBlur={e => {
+                    const value = e.currentTarget.valueAsNumber;
+                    if (value === Number((layer.h_top-layer.h_bottom).toPrecision(12))) return;
+                    if (Number.isFinite(value) && value > 0)
+                      setThicknesses(layers, layers.map((l, j) => i === j ? value : l.h_top-l.h_bottom));
+                    else e.currentTarget.value = String(layer.h_top-layer.h_bottom);
+                  }} />
+              </label>
               <div className="two">{field("E1", "E₁ (GPa)", 1e9)}{field("E2", "E₂ (GPa)", 1e9)}</div>
+              <details><summary>Out-of-plane material properties</summary>
+                <p className="meta">These properties are recorded for completeness under plane stress.</p>
+                {field("E3", "E₃ (GPa)", 1e9)}{field("nu23", "ν₂₃")}{field("nu13", "ν₁₃")}
+              </details>
               <div className="two">{field("nu12", "ν₁₂")}{field("theta_rad", "Orientation (rad)")}</div>
               <div className="three">{field("G12", "G₁₂ (GPa)", 1e9)}{field("G13", "G₁₃ (GPa)", 1e9)}{field("G23", "G₂₃ (GPa)", 1e9)}</div>
               <div className="two">{field("alpha1", "α₁ (1/K)")}{field("alpha2", "α₂ (1/K)")}</div>
               <div className="two">{field("beta1", "β₁")}{field("beta2", "β₂")}</div>
             </div>;
           })}
-        {c.layers?.length ? <Button onClick={() => {
-          const layers = [...c.layers!], last = layers[layers.length - 1], mid = (last.h_top + last.h_bottom) / 2;
-          layers.splice(layers.length - 1, 1, { ...last, h_top: mid }, { ...last, h_bottom: mid });
-          update({ layers });
-        }}>Split top layer</Button> : <Button disabled={c.E == null || c.nu == null} onClick={() => {
-          const E = c.E!, nu = c.nu!, G = E / (2 * (1 + nu));
-          update({ layers: [{ h_bottom: -c.h/2, h_top: c.h/2, E1:E, E2:E, E3:E,
-            nu12:nu, nu23:nu, nu13:nu, G12:G, G13:G, G23:G, theta_rad:0,
-            alpha1:c.alpha, alpha2:c.alpha, alpha3:0, beta1:c.beta, beta2:c.beta, beta3:0 }] });
-        }}>Create layer from current isotropic material</Button>}
-      </Section>}
+        </>}
+      </Section>
+      <Section title="Edge supports">
+        <Select label="Boundary conditions" value={String(c.choicebc)}
+          set={v => update({ choicebc: Number(v) })}
+          items={[
+            ["1", "SSSS · All edges simply supported"], ["2", "CCCC · All edges clamped"],
+            ["3", "SFSF · Left/right simply supported, top/bottom free"],
+            ["4", "FSFS · Left/right free, top/bottom simply supported"],
+            ["5", "SCSC · Left/right simply supported, top/bottom clamped"],
+            ["6", "CSCS · Left/right clamped, top/bottom simply supported"],
+          ]} />
+        <p className="meta">Left and right are x = 0 and a. Bottom and top are y = 0 and b.</p>
+      </Section>
       <Section title="Mechanical pressure">
         <Select
           label="Distribution"
@@ -124,7 +167,7 @@ export function Setup({
         {num("q0", "Pressure q₀ (Pa)")}
       </Section>
       <Section title="Thermal & moisture">
-        <p className="meta">T(z) = T1 + (z/h) T2 + sin(πz/h) T3 / π. T2 is the linear top-to-bottom difference (K); T1 is the mean component. Moisture uses the same profile.</p>
+        <p className="meta">Enter the mean temperature change and the difference between the top and bottom of the section.</p>
         <Select
           label="In-plane distribution"
           value={c.thermal_distribution}
@@ -144,8 +187,17 @@ export function Setup({
             {num("beta", "Moisture β")}
           </div>
         )}
-        {coeff("t_coeffs", "T")}
-        {coeff("c_coeffs", "C")}
+        <div className="two">
+          <Num label="Mean temperature change (K)" value={c.t_coeffs?.[0] ?? 0}
+            set={v => update({t_coeffs: [v, c.t_coeffs?.[1] ?? 0, c.t_coeffs?.[2] ?? 0]})} />
+          <Num label="Top − bottom temperature (K)" value={c.t_coeffs?.[1] ?? 0}
+            set={v => update({t_coeffs: [c.t_coeffs?.[0] ?? 0, v, c.t_coeffs?.[2] ?? 0]})} />
+        </div>
+        <details><summary>Advanced thermal and moisture profile</summary>
+          <p className="meta">T(z) = T1 + (z/h) T2 + sin(πz/h) T3 / π. Moisture uses the same profile.</p>
+          {coeff("t_coeffs", "T")}
+          {coeff("c_coeffs", "C")}
+        </details>
       </Section>
       <Section title="Elastic foundation">
         <Select

@@ -1,4 +1,6 @@
-# HOSNT12 FEA Platform — Intermediate Architecture Blueprint
+# PlateX pavement analysis workbench
+
+PlateX models bonded finite pavement sections with HOSNT12 and flexible pavement over a semi-infinite subgrade with the IRC:37 layered-elastic engine. The workbench also supports IRC bridge load placement and plate benchmark validation.
 
 ## 1. Architectural Strategy
 This repository uses a **pragmatic, intermediate monorepo** designed for:
@@ -111,3 +113,18 @@ provenance. FastAPI exposes this workflow through
 From the repository root install `pip install -r requirements.txt` and run `streamlit run app.py`. The default analysis workbench uses the same React components and styles as the standalone frontend. The Streamlit component forwards workbench requests to the existing FastAPI routes in process. Each session tracks its latest response. The sidebar also offers the native structured forms and advanced JSON inputs.
 
 The deployable frontend assets live in `streamlit_workbench/`. After changing the React source, run `npm ci` and `npm run build:streamlit` in `frontend/` and include the rebuilt assets with the source. A Python-only Streamlit host can then serve the workbench directly.
+
+
+## Workbench code guide
+
+The React entry point is `frontend/src/main.tsx`. The application shell and navigation live in `App.tsx`. Shared controls and visualization live in `components/`, feature screens in `pages/`, and the shared pavement analysis state and asynchronous solve lifecycle in `state/usePavementAnalysis.ts`. The state hook keeps the last successful result and marks it stale when its inputs change.
+
+The `api/` folder contains typed service calls, the HTTP transport, and the Streamlit message bridge. Both transports use the same API paths. Streamlit serializes requests and gives an explicit timeout or server error when a request cannot complete.
+
+The backend API is organized into solve, IRC, and validation routers. The routers map HTTP requests to Pydantic schemas and domain services. Numerical methods and material rules remain in `backend/hosnt12/`. `app.py` hosts the same API in process for Streamlit and restricts bridge requests to its listed routes.
+
+## Environment settings
+
+For standalone development, Vite forwards `/api` to `http://127.0.0.1:8000`. Set `PLATEX_API_PROXY_TARGET` in the frontend environment to change the proxy target. Set `VITE_API_BASE_URL` when the browser must call a different API origin directly. The backend reads `PLATEX_CORS_ORIGINS` as a comma-separated list of allowed origins, defaulting to the two local Vite origins. These settings do not change the Streamlit in-process transport.
+
+Run `npm run build --prefix frontend` for the standalone bundle and `npm run build:streamlit --prefix frontend` after frontend changes used by Streamlit. Backend verification uses the commands in `AGENTS.md`.
